@@ -322,13 +322,11 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 <!-- LISTA -->
 <div class="section" id="tab-lista">
   <div class="lista-header">
-    <div class="filter-bar" style="justify-content:space-between">
-      <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:130px">
-      <button class="btn-csv" onclick="abrirPatio()" style="background:#1B5E20;color:#fff;border-color:#1B5E20">PÁTIO</button>
-      <button class="btn-csv" onclick="exportCSV()">EXPORTAR</button>
-    </div>
-    <div style="display:flex;gap:6px;margin-top:6px">
-      <button class="btn-csv" onclick="solicitarSenhaBackup()" style="flex:1;background:#1565C020;font-size:11px">💾 Backup</button>
+    <div class="filter-bar" style="justify-content:center;gap:6px">
+      <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:108px;padding:10px 6px;font-size:12px">
+      <button class="btn-csv" onclick="abrirPatio()" style="background:#1B5E20;color:#fff;border-color:#1B5E20;padding:10px 8px;font-size:11px;flex:0 0 auto">PÁTIO</button>
+      <button class="btn-csv" onclick="exportCSV()" style="padding:10px 8px;font-size:11px;flex:0 0 auto">EXPORTAR</button>
+      <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:10px 8px;font-size:11px;flex:0 0 auto">💾 BACKUP</button>
     </div>
   </div>
   <div class="lista-body">
@@ -747,12 +745,14 @@ function atualizarTurnoBar() {
   if (t) {
     info.textContent = '🟢 ' + t.nome;
     info.style.color = '#81C784';
+    btn.textContent = 'LOGOUT';
+    btn.style.background = '#8B1A1A';
   } else {
     info.textContent = 'Nenhum porteiro logado';
     info.style.color = '#90A4AE';
+    btn.textContent = 'LOGIN';
+    btn.style.background = '#1565C0';
   }
-  btn.textContent = 'ONLINE';
-  btn.style.background = '#1565C0';
 }
 
 // Botão da barra de turno: se logado, mostra opção de logout; se não, abre login
