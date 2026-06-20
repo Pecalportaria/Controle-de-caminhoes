@@ -1840,14 +1840,27 @@ function restaurarBackup(input) {
   reader.readAsText(file);
 }
 
-function confirmarRestauracao() {
+async function confirmarRestauracao() {
   if (!_backupPendente) return;
-  regs = _backupPendente.registros;
+  const registrosRestaurados = _backupPendente.registros;
+  regs = registrosRestaurados;
   salvar();
   _backupPendente = null;
   document.getElementById('restaurar-overlay').classList.remove('open');
   renderLista();
-  toast('✓ ' + regs.length + ' registros restaurados!');
+  toast('Restaurando ' + registrosRestaurados.length + ' registros...');
+
+  // Gravar cada registro individualmente no Firestore
+  let sucesso = 0;
+  for (const reg of registrosRestaurados) {
+    try {
+      await salvarReg(reg);
+      sucesso++;
+    } catch(e) {
+      console.error('Erro ao restaurar registro', reg.id, e);
+    }
+  }
+  toast('✓ ' + sucesso + ' de ' + registrosRestaurados.length + ' registros salvos no servidor!');
 }
 
 // ── Pátio — caminhões dentro da empresa ───────────────
