@@ -7,11 +7,10 @@
 <title>CONTROLE DE CAMINHÕES</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <script type="module">
-// ── Firebase ────────────────────────────────────────
-try {
-  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
-  const { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+try {
   const firebaseConfig = {
     apiKey: "AIzaSyAdRSEYzMZZIFGX9vM-QBqFmEA1EOpcEf8",
     authDomain: "portariadados.firebaseapp.com",
@@ -1546,7 +1545,7 @@ function _cancelarConfirmDel() {
 
 function _confirmarDelComSenha() {
   document.getElementById('confirm-del-overlay').classList.remove('open');
-  pedirSenha('Digite a senha', 'Informe a senha para confirmar a exclusão', function(senha) {
+  pedirSenha('Digite a senha', 'Informe a senha para confirmar a exclusão', async function(senha) {
     if (senha !== '2026') { toast('Senha incorreta!'); return; }
     const idDel = _delId;
     regs = regs.filter(x => x.id !== idDel);
@@ -1605,7 +1604,7 @@ function fecharModal() {
   editId = null;
 }
 
-function salvarEdicao() {
+async function salvarEdicao() {
   const cav=document.getElementById('e-cavalo').value.trim();
   const car=document.getElementById('e-carreta').value.trim()||'CAVALO';
   const mot=document.getElementById('e-motorista').value.trim();
