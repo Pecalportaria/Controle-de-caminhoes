@@ -745,16 +745,14 @@ function atualizarTurnoBar() {
   const btn = document.getElementById('turno-btn');
   if (!info || !btn) return;
   if (t) {
-    info.textContent = '🟢 ' + t.nome + ' (em turno)';
+    info.textContent = '🟢 ' + t.nome;
     info.style.color = '#81C784';
-    btn.textContent = 'ON LINE';
-    btn.style.background = '#1B5E20';
   } else {
     info.textContent = 'Nenhum porteiro logado';
     info.style.color = '#90A4AE';
-    btn.textContent = 'Login';
-    btn.style.background = '#1565C0';
   }
+  btn.textContent = 'ONLINE';
+  btn.style.background = '#1565C0';
 }
 
 // Botão da barra de turno: se logado, mostra opção de logout; se não, abre login
