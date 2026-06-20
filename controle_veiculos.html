@@ -8,32 +8,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <script type="module">
 // ── Firebase ────────────────────────────────────────
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+try {
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+  const { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAdRSEYzMZZIFGX9vM-QBqFmEA1EOpcEf8",
-  authDomain: "portariadados.firebaseapp.com",
-  projectId: "portariadados",
-  storageBucket: "portariadados.firebasestorage.app",
-  messagingSenderId: "139813440188",
-  appId: "1:139813440188:web:883a7ccf27cb753c465eb9"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyAdRSEYzMZZIFGX9vM-QBqFmEA1EOpcEf8",
+    authDomain: "portariadados.firebaseapp.com",
+    projectId: "portariadados",
+    storageBucket: "portariadados.firebasestorage.app",
+    messagingSenderId: "139813440188",
+    appId: "1:139813440188:web:883a7ccf27cb753c465eb9"
+  };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-// Expor para o script principal
-window._db = db;
-window._col = (nome) => collection(db, nome);
-window._doc = (col, id) => doc(db, col, String(id));
-window._setDoc = setDoc;
-window._deleteDoc = deleteDoc;
-window._onSnapshot = onSnapshot;
-window._query = query;
-window._orderBy = orderBy;
-window._fbReady = true;
-window.dispatchEvent(new Event('fbReady'));
+  window._db = db;
+  window._col = (nome) => collection(db, nome);
+  window._doc = (col, id) => doc(db, col, String(id));
+  window._setDoc = setDoc;
+  window._deleteDoc = deleteDoc;
+  window._onSnapshot = onSnapshot;
+  window._query = query;
+  window._orderBy = orderBy;
+  window._fbReady = true;
+  window.dispatchEvent(new Event('fbReady'));
+} catch (err) {
+  window._fbError = err.message || String(err);
+  console.error('Erro ao carregar Firebase:', err);
+  window.dispatchEvent(new Event('fbError'));
+}
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -628,6 +633,16 @@ if (cacheLocal) { try { regs = JSON.parse(cacheLocal); renderLista(); } catch(e)
 // Tentar inicializar imediatamente ou aguardar evento
 if (window._fbReady) { iniciarFirebase(); }
 else { window.addEventListener('fbReady', iniciarFirebase); }
+
+// Mostrar erro se Firebase falhar ao carregar
+window.addEventListener('fbError', function() {
+  const el = document.getElementById('fb-status');
+  if (el) el.textContent = '🔴 Erro: ' + (window._fbError || 'falha ao conectar');
+});
+if (window._fbError) {
+  const el = document.getElementById('fb-status');
+  if (el) el.textContent = '🔴 Erro: ' + window._fbError;
+}
 
 // Armazena valores entre steps
 const vals = {cavalo:'',carreta:'',motorista:'',data:'',entrada:'',saida:'',destino:''};
