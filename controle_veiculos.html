@@ -618,7 +618,7 @@ function iniciarFirebase() {
   // Listener em tempo real para registros
   const q = window._query(window._col('registros'), window._orderBy('data','desc'));
   window._onSnapshot(q, (snap) => {
-    regs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    regs = snap.docs.map(d => { const data = d.data(); return { ...data, id: data.id || Number(d.id) }; });
     localStorage.setItem('ctrl_v2', JSON.stringify(regs));
     renderLista();
     if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
