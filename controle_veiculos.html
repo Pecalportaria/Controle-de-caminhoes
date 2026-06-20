@@ -594,6 +594,12 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 </div>
 
 <script>
+window.addEventListener('error', function(e) {
+  const el = document.getElementById('fb-status');
+  if (el) el.textContent = '⚠️ JS erro: ' + e.message + ' (linha ' + e.lineno + ')';
+  console.error('Erro JS capturado:', e.message, e.filename, e.lineno);
+});
+
 let sit = 'carregado';
 let editSit = 'carregado';
 let editId = null;
@@ -607,6 +613,7 @@ function iniciarFirebase() {
   if (_fbIniciado || !window._fbReady) return;
   _fbIniciado = true;
   carregarPorteiros();
+  carregarTurno();
 
   // Listener em tempo real para registros
   const q = window._query(window._col('registros'), window._orderBy('data','desc'));
@@ -733,21 +740,35 @@ function carregarPorteiros() {
   });
 }
 
+// Turno em memória, sincronizado via Firestore em tempo real
+let _turnoAtual = null;
+
 function getTurno() {
-  try {
-    const t = JSON.parse(localStorage.getItem(TURNO_KEY) || 'null');
-    return t || null;
-  } catch(e) { return null; }
+  return _turnoAtual;
 }
 
 function turnoAtivo() {
-  return getTurno() !== null;
+  return _turnoAtual !== null;
+}
+
+// Escutar mudanças no turno em tempo real (qualquer dispositivo)
+function carregarTurno() {
+  if (!window._fbReady) return;
+  window._onSnapshot(window._doc('config', 'turno'), (snap) => {
+    if (snap.exists() && snap.data().nome) {
+      _turnoAtual = snap.data();
+    } else {
+      _turnoAtual = null;
+    }
+    atualizarTurnoBar();
+  });
 }
 
 function atualizarTurnoBar() {
   const t = getTurno();
   const info = document.getElementById('turno-info');
   const btn = document.getElementById('turno-btn');
+  if (!info || !btn) return;
   if (t) {
     info.textContent = '🟢 ' + t.nome + ' (em turno)';
     info.style.color = '#81C784';
@@ -790,23 +811,38 @@ function cancelarLoginTurno() {
   document.getElementById('login-overlay').classList.remove('open');
 }
 
-function confirmarLoginTurno() {
+async function confirmarLoginTurno() {
+  // Verificar turno atual em tempo real antes de logar (evita corrida entre dispositivos)
+  if (turnoAtivo()) {
+    toast('Já existe um turno ativo: ' + getTurno().nome);
+    document.getElementById('login-overlay').classList.remove('open');
+    return;
+  }
   const nome = document.getElementById('login-porteiro').value;
   const senha = document.getElementById('login-senha').value;
   const porteiros = getPorteiros();
   const p = porteiros.find(x => x.nome === nome);
   if (!p || p.senha !== senha) { toast('Senha incorreta!'); return; }
-  localStorage.setItem(TURNO_KEY, JSON.stringify({ nome: p.nome, inicio: Date.now() }));
-  document.getElementById('login-overlay').classList.remove('open');
-  atualizarTurnoBar();
-  toast('Turno iniciado — ' + p.nome);
+
+  try {
+    await window._setDoc(window._doc('config', 'turno'), { nome: p.nome, inicio: Date.now() });
+    document.getElementById('login-overlay').classList.remove('open');
+    toast('Turno iniciado — ' + p.nome);
+  } catch(e) {
+    console.error('Erro ao iniciar turno:', e);
+    toast('Erro ao conectar — tente novamente');
+  }
 }
 
-function fazerLogoutTurno() {
-  localStorage.removeItem(TURNO_KEY);
-  document.getElementById('turno-ativo-overlay').classList.remove('open');
-  atualizarTurnoBar();
-  toast('Turno finalizado');
+async function fazerLogoutTurno() {
+  try {
+    await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0 });
+    document.getElementById('turno-ativo-overlay').classList.remove('open');
+    toast('Turno finalizado');
+  } catch(e) {
+    console.error('Erro ao finalizar turno:', e);
+    toast('Erro ao conectar — tente novamente');
+  }
 }
 
 // Verifica se há turno ativo antes de permitir ação; se não, pede login
