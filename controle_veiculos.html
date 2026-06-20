@@ -289,7 +289,6 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
     <span class="header-badge" id="ano-badge">2026</span>
   </div>
   <div class="header-sub">Controle de entrada e saída de caminhões</div>
-  <div id="fb-status" style="font-size:10px;color:#546E7A;margin-top:2px;text-align:right">⏳ Conectando...</div>
   <div id="turno-bar" style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding:6px 10px;background:#0D1F3C;border-radius:8px;border:1px solid #1565C040">
     <span id="turno-info" style="font-size:12px;font-weight:700;color:#90A4AE;letter-spacing:.04em">Nenhum porteiro logado</span>
     <button id="turno-btn" onclick="abrirLoginTurno()" style="padding:5px 12px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.06em">Login</button>
@@ -326,12 +325,10 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
     <div class="filter-bar" style="justify-content:space-between">
       <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:130px">
       <button class="btn-csv" onclick="abrirPatio()" style="background:#1B5E20;color:#fff;border-color:#1B5E20">PÁTIO</button>
-      <button class="btn-csv" onclick="exportCSV()">CSV</button>
+      <button class="btn-csv" onclick="exportCSV()">EXPORTAR</button>
     </div>
     <div style="display:flex;gap:6px;margin-top:6px">
-      <button class="btn-csv" onclick="fazerBackup()" style="flex:1;background:#1565C020;font-size:11px">💾 Backup</button>
-      <button class="btn-csv" onclick="document.getElementById('import-input').click()" style="flex:1;background:#1565C020;font-size:11px">📂 Restaurar</button>
-      <input type="file" id="import-input" accept=".json" style="display:none" onchange="restaurarBackup(this)">
+      <button class="btn-csv" onclick="solicitarSenhaBackup()" style="flex:1;background:#1565C020;font-size:11px">💾 Backup</button>
     </div>
   </div>
   <div class="lista-body">
@@ -499,20 +496,6 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
   </div>
 </div>
 
-<!-- MODAL RESTAURAR BACKUP -->
-<div class="modal-overlay" id="restaurar-overlay" style="align-items:center;padding:0 24px">
-  <div style="background:#0D1F3C;border-radius:var(--radius-lg);width:100%;max-width:340px;padding:24px 20px;border:1px solid #F57C0040">
-    <div style="font-size:28px;text-align:center;margin-bottom:10px">⚠️</div>
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:#FFB74D;text-align:center;margin-bottom:8px;letter-spacing:.04em">Restaurar backup</div>
-    <div style="font-size:13px;color:#90A4AE;text-align:center;margin-bottom:8px;line-height:1.5" id="restaurar-info"></div>
-    <div style="font-size:12px;color:#EF9A9A;text-align:center;margin-bottom:20px">Os registros atuais serão substituídos. Esta ação não pode ser desfeita.</div>
-    <div style="display:flex;gap:10px">
-      <button onclick="document.getElementById('restaurar-overlay').classList.remove('open')" style="flex:1;padding:12px;background:transparent;color:#546E7A;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase">Cancelar</button>
-      <button onclick="confirmarRestauracao()" style="flex:1;padding:12px;background:#1565C0;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase">Restaurar</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL PÁTIO -->
 <div class="modal-overlay" id="patio-overlay">
   <div class="modal" style="padding-bottom:0;display:flex;flex-direction:column;max-height:85vh">
@@ -595,8 +578,6 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 
 <script>
 window.addEventListener('error', function(e) {
-  const el = document.getElementById('fb-status');
-  if (el) el.textContent = '⚠️ JS erro: ' + e.message + ' (linha ' + e.lineno + ')';
   console.error('Erro JS capturado:', e.message, e.filename, e.lineno);
 });
 
@@ -622,12 +603,8 @@ function iniciarFirebase() {
     localStorage.setItem('ctrl_v2', JSON.stringify(regs));
     renderLista();
     if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
-    const el = document.getElementById('fb-status');
-    if (el) el.textContent = '🟢 Online — ' + regs.length + ' registros';
   }, (err) => {
     console.error('Firestore erro:', err);
-    const el = document.getElementById('fb-status');
-    if (el) el.textContent = '🔴 Offline — usando dados locais';
     toast('Erro de conexão — usando dados locais');
   });
 }
@@ -642,12 +619,10 @@ else { window.addEventListener('fbReady', iniciarFirebase); }
 
 // Mostrar erro se Firebase falhar ao carregar
 window.addEventListener('fbError', function() {
-  const el = document.getElementById('fb-status');
-  if (el) el.textContent = '🔴 Erro: ' + (window._fbError || 'falha ao conectar');
+  toast('Erro ao conectar: ' + (window._fbError || 'falha desconhecida'));
 });
 if (window._fbError) {
-  const el = document.getElementById('fb-status');
-  if (el) el.textContent = '🔴 Erro: ' + window._fbError;
+  toast('Erro ao conectar: ' + window._fbError);
 }
 
 // Armazena valores entre steps
@@ -772,7 +747,7 @@ function atualizarTurnoBar() {
   if (t) {
     info.textContent = '🟢 ' + t.nome + ' (em turno)';
     info.style.color = '#81C784';
-    btn.textContent = 'Turno';
+    btn.textContent = 'ON LINE';
     btn.style.background = '#1B5E20';
   } else {
     info.textContent = 'Nenhum porteiro logado';
@@ -834,15 +809,22 @@ async function confirmarLoginTurno() {
   }
 }
 
-async function fazerLogoutTurno() {
-  try {
-    await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0 });
-    document.getElementById('turno-ativo-overlay').classList.remove('open');
-    toast('Turno finalizado');
-  } catch(e) {
-    console.error('Erro ao finalizar turno:', e);
-    toast('Erro ao conectar — tente novamente');
-  }
+function fazerLogoutTurno() {
+  const t = getTurno();
+  if (!t) return;
+  const porteiros = getPorteiros();
+  const p = porteiros.find(x => x.nome === t.nome);
+  pedirSenha('Finalizar turno', 'Digite a senha de ' + t.nome + ' para sair', async function(senha) {
+    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+    try {
+      await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0 });
+      document.getElementById('turno-ativo-overlay').classList.remove('open');
+      toast('Turno finalizado');
+    } catch(e) {
+      console.error('Erro ao finalizar turno:', e);
+      toast('Erro ao conectar — tente novamente');
+    }
+  });
 }
 
 // Verifica se há turno ativo antes de permitir ação; se não, pede login
@@ -1824,7 +1806,18 @@ function cancelarSenha() {
   _senhaCallback = null;
 }
 
-// ── Backup e Restauração ──────────────────────────────
+// ── Backup ──────────────────────────────────────────
+function solicitarSenhaBackup() {
+  const t = getTurno();
+  if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
+  const porteiros = getPorteiros();
+  const p = porteiros.find(x => x.nome === t.nome);
+  pedirSenha('Fazer backup', 'Digite a senha de ' + t.nome + ' para exportar', function(senha) {
+    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+    fazerBackup();
+  });
+}
+
 function fazerBackup() {
   if (!regs.length) { toast('Nenhum registro para fazer backup'); return; }
   const backup = {
@@ -1847,56 +1840,6 @@ function fazerBackup() {
   a.download = nome;
   a.click();
   toast('Backup salvo: ' + regs.length + ' registros');
-}
-
-let _backupPendente = null;
-
-function restaurarBackup(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const backup = JSON.parse(e.target.result);
-      if (!backup.registros || !Array.isArray(backup.registros)) {
-        toast('Arquivo inválido'); return;
-      }
-      _backupPendente = backup;
-      const d = backup.data ? new Date(backup.data) : null;
-      const dataStr = d ? fmtD(d.toISOString().slice(0,10)) + ' às ' +
-        String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') : 'desconhecida';
-      document.getElementById('restaurar-info').textContent =
-        'Arquivo com ' + backup.registros.length + ' registros — backup de ' + dataStr;
-      document.getElementById('restaurar-overlay').classList.add('open');
-    } catch(err) {
-      toast('Erro ao ler arquivo de backup');
-    }
-    input.value = '';
-  };
-  reader.readAsText(file);
-}
-
-async function confirmarRestauracao() {
-  if (!_backupPendente) return;
-  const registrosRestaurados = _backupPendente.registros;
-  regs = registrosRestaurados;
-  salvar();
-  _backupPendente = null;
-  document.getElementById('restaurar-overlay').classList.remove('open');
-  renderLista();
-  toast('Restaurando ' + registrosRestaurados.length + ' registros...');
-
-  // Gravar cada registro individualmente no Firestore
-  let sucesso = 0;
-  for (const reg of registrosRestaurados) {
-    try {
-      await salvarReg(reg);
-      sucesso++;
-    } catch(e) {
-      console.error('Erro ao restaurar registro', reg.id, e);
-    }
-  }
-  toast('✓ ' + sucesso + ' de ' + registrosRestaurados.length + ' registros salvos no servidor!');
 }
 
 // ── Pátio — caminhões dentro da empresa ───────────────
