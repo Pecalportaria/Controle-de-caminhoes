@@ -8,36 +8,47 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-try {
-  const firebaseConfig = {
-    apiKey: "AIzaSyAdRSEYzMZZIFGX9vM-QBqFmEA1EOpcEf8",
-    authDomain: "portariadados.firebaseapp.com",
-    projectId: "portariadados",
-    storageBucket: "portariadados.firebasestorage.app",
-    messagingSenderId: "139813440188",
-    appId: "1:139813440188:web:883a7ccf27cb753c465eb9"
-  };
+(async function() {
+  try {
+    const firebaseConfig = {
+      apiKey: "AIzaSyAdRSEYzMZZIFGX9vM-QBqFmEA1EOpcEf8",
+      authDomain: "portariadados.firebaseapp.com",
+      projectId: "portariadados",
+      storageBucket: "portariadados.firebasestorage.app",
+      messagingSenderId: "139813440188",
+      appId: "1:139813440188:web:883a7ccf27cb753c465eb9"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  window._db = db;
-  window._col = (nome) => collection(db, nome);
-  window._doc = (col, id) => doc(db, col, String(id));
-  window._setDoc = setDoc;
-  window._deleteDoc = deleteDoc;
-  window._onSnapshot = onSnapshot;
-  window._query = query;
-  window._orderBy = orderBy;
-  window._fbReady = true;
-  window.dispatchEvent(new Event('fbReady'));
-} catch (err) {
-  window._fbError = err.message || String(err);
-  console.error('Erro ao carregar Firebase:', err);
-  window.dispatchEvent(new Event('fbError'));
-}
+    // Ativar persistência offline — dados ficam disponíveis sem internet
+    // e sincronizam automaticamente quando a conexão voltar
+    try {
+      await enableIndexedDbPersistence(db);
+    } catch (persistErr) {
+      // Falha comum: múltiplas abas abertas (failed-precondition) ou navegador sem suporte (unimplemented)
+      console.warn('Persistência offline não ativada:', persistErr.code);
+    }
+
+    window._db = db;
+    window._col = (nome) => collection(db, nome);
+    window._doc = (col, id) => doc(db, col, String(id));
+    window._setDoc = setDoc;
+    window._deleteDoc = deleteDoc;
+    window._onSnapshot = onSnapshot;
+    window._query = query;
+    window._orderBy = orderBy;
+    window._fbReady = true;
+    window.dispatchEvent(new Event('fbReady'));
+  } catch (err) {
+    window._fbError = err.message || String(err);
+    console.error('Erro ao carregar Firebase:', err);
+    window.dispatchEvent(new Event('fbError'));
+  }
+})();
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -323,10 +334,10 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 <div class="section" id="tab-lista">
   <div class="lista-header">
     <div class="filter-bar" style="justify-content:center;gap:6px">
-      <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:108px;padding:10px 6px;font-size:12px">
-      <button class="btn-csv" onclick="abrirPatio()" style="background:#1B5E20;color:#fff;border-color:#1B5E20;padding:10px 8px;font-size:11px;flex:0 0 auto">PÁTIO</button>
-      <button class="btn-csv" onclick="exportCSV()" style="padding:10px 8px;font-size:11px;flex:0 0 auto">EXPORTAR</button>
+      <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:108px;padding:10px 6px;font-size:12px;border:2px solid #FFFFFF">
+      <button class="btn-csv" onclick="abrirPatio()" style="background:#1B5E20;color:#fff;border:2px solid #FFFFFF;padding:10px 8px;font-size:11px;flex:0 0 auto">PÁTIO</button>
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:10px 8px;font-size:11px;flex:0 0 auto">💾 BACKUP</button>
+      <button class="btn-csv" onclick="exportCSV()" style="padding:10px 8px;font-size:11px;flex:0 0 auto">EXPORTAR</button>
     </div>
   </div>
   <div class="lista-body">
