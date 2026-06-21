@@ -103,7 +103,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 
 
 /* PAINEL DESLIZANTE */
-.painel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;align-items:flex-end}
+.painel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;align-items:flex-end;transition:padding-bottom .15s ease}
 .painel-overlay.open{display:flex}
 .painel-form{
   background:#0D1F3C;
@@ -248,7 +248,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 
 
 /* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;align-items:flex-end}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;align-items:flex-end;transition:padding-bottom .15s ease}
 .modal-overlay.open{display:flex}
 .modal{background:#0D1F3C;border-radius:var(--radius-lg) var(--radius-lg) 0 0;width:100%;max-height:90vh;overflow-y:auto;padding:20px 16px 40px;border-top:2px solid #1565C0}
 .modal-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;letter-spacing:.04em}
@@ -1905,6 +1905,26 @@ function renderPatio() {
 
 renderLista();
 atualizarTurnoBar();
+
+// ── Evitar que o teclado virtual cubra o campo ativo ──
+if (window.visualViewport) {
+  const ajustarParaTeclado = () => {
+    const vv = window.visualViewport;
+    const alturaTeclado = window.innerHeight - vv.height - vv.offsetTop;
+    const offset = alturaTeclado > 80 ? alturaTeclado : 0; // só considera teclado se diferença for significativa
+    document.querySelectorAll('.modal-overlay.open, .painel-overlay.open').forEach(ov => {
+      ov.style.paddingBottom = offset + 'px';
+    });
+  };
+  window.visualViewport.addEventListener('resize', ajustarParaTeclado);
+  window.visualViewport.addEventListener('scroll', ajustarParaTeclado);
+
+  // Reagir também quando um overlay é aberto (caso o teclado já esteja visível)
+  const overlayObserver = new MutationObserver(ajustarParaTeclado);
+  document.querySelectorAll('.modal-overlay, .painel-overlay').forEach(ov => {
+    overlayObserver.observe(ov, { attributes: true, attributeFilter: ['class'] });
+  });
+}
 </script>
 </body>
 </html>
