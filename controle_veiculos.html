@@ -1194,10 +1194,18 @@ function renderStep() {
         let _ultimaTecla = '';
         inp.addEventListener('keydown', function(e){
           _ultimaTecla = e.key;
+          // Se campo está com sugestão e usuário começa a digitar, apaga imediatamente
+          const teclasEspeciais = ['Enter','Tab','Shift','Control','Alt','Meta','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Escape','CapsLock','Backspace','Delete'];
+          if (isSugestao && !teclasEspeciais.includes(e.key) && window._sugestoes && window._sugestoes['destino']) {
+            this.value = '';
+            this.style.color = '';
+            this.style.borderBottomColor = '';
+            delete window._sugestoes['destino'];
+            vals['destino'] = '';
+          }
         });
         inp.addEventListener('input', function(){
           this.value = this.value.toUpperCase();
-          // Só autocompletar se não foi backspace/delete
           if (_ultimaTecla !== 'Backspace' && _ultimaTecla !== 'Delete') {
             autocompletarDestino(this);
           }
