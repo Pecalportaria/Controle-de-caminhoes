@@ -337,7 +337,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
       <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:108px;padding:10px 6px;font-size:12px;border:2px solid #FFFFFF">
       <button class="btn-csv" onclick="abrirPatio()" style="background:#1B5E20;color:#fff;border:2px solid #FFFFFF;padding:10px 8px;font-size:11px;flex:0 0 auto">PÁTIO</button>
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:10px 8px;font-size:11px;flex:0 0 auto">💾 BACKUP</button>
-      <button class="btn-csv" onclick="exportCSV()" style="padding:10px 8px;font-size:11px;flex:0 0 auto">EXPORTAR</button>
+      <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:10px 8px;font-size:11px;flex:0 0 auto">EXPORTAR</button>
     </div>
   </div>
   <div class="lista-body">
@@ -354,6 +354,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
         maxlength="4" inputmode="text" autocomplete="off"
         onfocus="this.value='';document.getElementById('hist-motorista').value='';renderHistorico()"
         oninput="this.value=this.value.toUpperCase();document.getElementById('hist-motorista').value='';renderHistorico()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();renderHistorico();this.blur()}"
         style="width:80px;padding:7px 10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:15px;background:#0D1F3C;color:#fff;outline:none;letter-spacing:.08em;font-weight:700;text-transform:uppercase">
     </div>
     <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
@@ -361,7 +362,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
       <input type="text" id="hist-motorista" placeholder="Nome do motorista"
         autocomplete="off"
         onfocus="this.value='';document.getElementById('hist-cavalo').value='';renderHistorico()"
-        oninput="this.value=this.value.toUpperCase();document.getElementById('hist-cavalo').value='';renderHistorico()"
+        oninput="autocompletarMotoristaHist(this)"
         style="flex:1;padding:7px 10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:13px;background:#0D1F3C;color:#fff;outline:none">
     </div>
     <div style="display:flex;gap:8px">
@@ -933,6 +934,49 @@ function semAcento(str) {
   return str.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 }
 
+// ── Autocompletar motorista no histórico ─────────────
+function autocompletarMotoristaHist(inp) {
+  inp.value = inp.value.toUpperCase();
+  document.getElementById('hist-cavalo').value = '';
+  const digitado = inp.value;
+  if (!digitado || digitado.length < 2) { renderHistorico(); return; }
+  // Autocompletar ignorando acentos
+  const motoristas = [...new Set(regs.map(r => r.motorista).filter(m => m && m.length > 0))];
+  let _ultimaTecla = inp._ultimaTecla || '';
+  if (_ultimaTecla !== 'Backspace' && _ultimaTecla !== 'Delete') {
+    const match = motoristas.find(m => semAcento(m).startsWith(semAcento(digitado)));
+    if (match && semAcento(match) !== semAcento(digitado)) {
+      const pos = digitado.length;
+      inp.value = match;
+      inp.setSelectionRange(pos, match.length);
+    }
+  }
+  inp._ultimaTecla = '';
+  renderHistorico();
+}
+
+// ── Autocompletar motorista na aba registrar ──────────
+function autocompletarMotoristaReg(inp) {
+  inp.value = inp.value.toUpperCase();
+  if (window._sugestoes) delete window._sugestoes['motorista'];
+  inp.style.color = '';
+  inp.style.borderBottomColor = '';
+  inp.dataset.sugestao = '0';
+  const digitado = inp.value;
+  if (!digitado || digitado.length < 2) return;
+  const motoristas = [...new Set(regs.map(r => r.motorista).filter(m => m && m.length > 0))];
+  const _ult = inp._ultimaTecla || '';
+  if (_ult !== 'Backspace' && _ult !== 'Delete') {
+    const match = motoristas.find(m => semAcento(m).startsWith(semAcento(digitado)));
+    if (match && semAcento(match) !== semAcento(digitado)) {
+      const pos = digitado.length;
+      inp.value = match;
+      inp.setSelectionRange(pos, match.length);
+    }
+  }
+  inp._ultimaTecla = '';
+}
+
 // ── Autocompletar destino por primeiras letras ────────
 function autocompletarDestino(inp) {
   const digitado = inp.value;
@@ -988,7 +1032,6 @@ function _destinoCorrigir() {
 }
 
 function sugerirInverso(cavalo) {
-  // Buscar último registro do cavalo
   const ultimo = regs
     .filter(r => r.cavalo === cavalo)
     .sort((a,b) => {
@@ -999,22 +1042,34 @@ function sugerirInverso(cavalo) {
 
   if (!ultimo) return;
 
-  // Inverter hora: se entrou → pré-selecionar saída; se saiu → pré-selecionar entrada
   if (ultimo.entrada) {
+    // Último foi ENTRADA → próximo deve ser SAÍDA
     window._sugestaoHora = 'saida';
-  } else if (ultimo.saida) {
-    window._sugestaoHora = 'entrada';
-  }
-
-  // Situação:
-  // - Último foi ENTRADA (ainda dentro): manter a mesma situação para a saída
-  // - Último foi SAÍDA (fora): inverter para a próxima entrada
-  if (ultimo.entrada) {
-    // Mantém a situação — saindo com a mesma carga que entrou
+    // Item 5: manter mesma situação (saindo com mesma carga que entrou)
     sit = ultimo.situacao || 'carregado';
+    // Item 4: sugerir mesmo motorista da entrada
+    if (!vals.motorista && ultimo.motorista) {
+      vals.motorista = ultimo.motorista;
+      if (!window._sugestoes) window._sugestoes = {};
+      window._sugestoes['motorista'] = ultimo.motorista;
+    }
   } else if (ultimo.saida) {
-    // Inverte — entra com carga oposta ao que saiu
+    // Último foi SAÍDA → próximo deve ser ENTRADA
+    window._sugestaoHora = 'entrada';
+    // Inverter situação ao entrar
     sit = ultimo.situacao === 'carregado' ? 'vazio' : 'carregado';
+    // Motorista: usar lógica dos últimos 5 registros (buscarSugestoes já faz isso)
+    // Item 6: sugerir mesmo destino se saída foi há menos de 24h
+    if (ultimo.destino && ultimo.data) {
+      const agora = new Date();
+      const dataSaida = new Date(ultimo.data + 'T' + (ultimo.saida || '00:00'));
+      const diffHoras = (agora - dataSaida) / (1000 * 60 * 60);
+      if (diffHoras <= 24 && !vals.destino) {
+        vals.destino = ultimo.destino;
+        if (!window._sugestoes) window._sugestoes = {};
+        window._sugestoes['destino'] = ultimo.destino;
+      }
+    }
   }
 }
 
@@ -1108,7 +1163,7 @@ function renderStep() {
   } else {
     let val = vals[s.key]||'';
     if ((s.tipo==='hora')&&!val) val = horaAgora();
-    const isSugestao = window._sugestoes && window._sugestoes[s.key] && window._sugestoes[s.key] === val;
+    const isSugestao = ['motorista','carreta','destino'].includes(s.key) && window._sugestoes && window._sugestoes[s.key] && window._sugestoes[s.key] === val;
     const inputStyle = isSugestao ? 'border-bottom-color:#43A047;color:#81C784' : '';
     const hint = isSugestao ? '<div style="font-size:11px;color:#43A047;margin-bottom:6px;letter-spacing:.04em">✦ Sugestão baseada no histórico — toque para editar</div>' : '';
     cont.innerHTML = hint+'<input type="text" id="painel-inp" class="painel-input" placeholder="'+s.ph+'" maxlength="'+s.maxlen+'" inputmode="'+s.mode+'" value="'+val+'" autocomplete="off" style="'+inputStyle+'">';
@@ -1116,11 +1171,10 @@ function renderStep() {
       const inp = document.getElementById('painel-inp');
       if (!inp) return;
       if (['cavalo','carreta','motorista'].includes(s.key)) {
-        // Marcar campo como sugestão para limpar no primeiro keydown de digitação
         inp.dataset.sugestao = isSugestao ? '1' : '0';
         inp.addEventListener('keydown', function(e){
-          // Se for tecla de digitação (não Enter, Tab, setas, etc) e o campo ainda é sugestão, limpa antes
           const teclasEspeciais = ['Enter','Tab','Shift','Control','Alt','Meta','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Escape','CapsLock'];
+          this._ultimaTecla = e.key;
           if (this.dataset.sugestao === '1' && !teclasEspeciais.includes(e.key)) {
             this.value = '';
             this.style.color = '';
@@ -1130,7 +1184,11 @@ function renderStep() {
             this.dataset.sugestao = '0';
           }
         });
-        inp.addEventListener('input', function(){ this.value=this.value.toUpperCase(); if(window._sugestoes) delete window._sugestoes[s.key]; this.style.color=''; this.style.borderBottomColor=''; this.dataset.sugestao='0'; });
+        if (s.key === 'motorista') {
+          inp.addEventListener('input', function(){ autocompletarMotoristaReg(this); });
+        } else {
+          inp.addEventListener('input', function(){ this.value=this.value.toUpperCase(); if(window._sugestoes) delete window._sugestoes[s.key]; this.style.color=''; this.style.borderBottomColor=''; this.dataset.sugestao='0'; });
+        }
       }
       if (s.key === 'destino') {
         let _ultimaTecla = '';
@@ -1816,6 +1874,17 @@ function cancelarSenha() {
 }
 
 // ── Backup ──────────────────────────────────────────
+function solicitarSenhaExportar() {
+  const t = getTurno();
+  if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
+  const porteiros = getPorteiros();
+  const p = porteiros.find(x => x.nome === t.nome);
+  pedirSenha('Exportar CSV', 'Digite a senha de ' + t.nome + ' para exportar', function(senha) {
+    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+    exportCSV();
+  });
+}
+
 function solicitarSenhaBackup() {
   const t = getTurno();
   if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
