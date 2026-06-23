@@ -736,6 +736,12 @@ function turnoAtivo() {
   return _turnoAtual !== null;
 }
 
+// Verifica se É ESTE dispositivo que está com o turno ativo
+function euEstouLogado() {
+  const meuNome = sessionStorage.getItem('meu_turno');
+  return meuNome && _turnoAtual && _turnoAtual.nome === meuNome;
+}
+
 // Escutar mudanças no turno em tempo real (qualquer dispositivo)
 function carregarTurno() {
   if (!window._fbReady) return;
@@ -811,6 +817,7 @@ async function confirmarLoginTurno() {
 
   try {
     await window._setDoc(window._doc('config', 'turno'), { nome: p.nome, inicio: Date.now() });
+    sessionStorage.setItem('meu_turno', p.nome); // registrar neste dispositivo quem logou
     document.getElementById('login-overlay').classList.remove('open');
     toast('Turno iniciado — ' + p.nome);
   } catch(e) {
@@ -828,6 +835,7 @@ function fazerLogoutTurno() {
     if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
     try {
       await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0 });
+      sessionStorage.removeItem('meu_turno');
       document.getElementById('turno-ativo-overlay').classList.remove('open');
       toast('Turno finalizado');
     } catch(e) {
@@ -842,6 +850,28 @@ function exigirTurno(callback) {
   if (turnoAtivo()) { callback(); return; }
   toast('Faça login para iniciar o turno');
   abrirLoginTurno();
+}
+
+// Verificar em tempo real no Firestore antes de ação sensível
+async function verificarTurnoAtivo(callback) {
+  if (!window._fbReady) {
+    // Offline: usar cache local
+    if (turnoAtivo()) { callback(); return; }
+    toast('Faça login para iniciar o turno');
+    abrirLoginTurno();
+    return;
+  }
+  try {
+    const { getDoc } = await Promise.resolve();
+    // Usar onSnapshot já sincronizado — _turnoAtual é confiável
+    if (turnoAtivo()) { callback(); return; }
+    toast('Faça login para iniciar o turno');
+    abrirLoginTurno();
+  } catch(e) {
+    if (turnoAtivo()) { callback(); return; }
+    toast('Faça login para iniciar o turno');
+    abrirLoginTurno();
+  }
 }
 
 // ── Gerenciar Porteiros ────────────────────────────────
@@ -1082,9 +1112,13 @@ function aplicarSugestoes(cavalo) {
 }
 
 function abrirPainel() {
-  if (!turnoAtivo()) {
-    toast('Faça login para iniciar o turno');
-    abrirLoginTurno();
+  if (!euEstouLogado()) {
+    if (turnoAtivo()) {
+      toast('Turno ativo em outro dispositivo — ' + getTurno().nome);
+    } else {
+      toast('Faça login para iniciar o turno');
+      abrirLoginTurno();
+    }
     return;
   }
   _abrirPainelInterno();
@@ -1626,7 +1660,7 @@ function abrirHistoricoCavalo(cavalo) {
 let _delId = null;
 
 function delReg(id) {
-  if (!turnoAtivo()) { toast('Faça login para iniciar o turno'); abrirLoginTurno(); return; }
+  if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
   _delId = id;
   document.getElementById('confirm-del-overlay').classList.add('open');
 }
@@ -1649,7 +1683,7 @@ function _confirmarDelComSenha() {
 }
 
 function editReg(id) {
-  if (!turnoAtivo()) { toast('Faça login para iniciar o turno'); abrirLoginTurno(); return; }
+  if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
   pedirSenha('Editar registro', 'Digite a senha para editar', function(senha) {
     if (senha !== '4343') { toast('Senha incorreta!'); return; }
     _editRegInterno(id);
@@ -1658,7 +1692,7 @@ function editReg(id) {
 
 // Duplo clique no motorista do histórico: exige turno + senha → abre edição na aba Registros
 function abrirEdicaoDoHistorico(id) {
-  if (!turnoAtivo()) { toast('Faça login para iniciar o turno'); abrirLoginTurno(); return; }
+  if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
   pedirSenha('Editar registro', 'Digite a senha para editar', function(senha) {
     if (senha !== '4343') { toast('Senha incorreta!'); return; }
     showTab('lista');
