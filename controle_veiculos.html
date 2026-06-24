@@ -1967,8 +1967,6 @@ function fazerBackup() {
 // ── Pátio — caminhões dentro da empresa ───────────────
 function calcularPatio() {
   // Para cada cavalo, pegar o registro mais recente
-  // Se o último registro foi ENTRADA → está no pátio
-  // Se o último registro foi SAÍDA → não está no pátio
   const porCavalo = {};
   regs.forEach(r => {
     if (!r.cavalo) return;
@@ -1978,7 +1976,32 @@ function calcularPatio() {
       porCavalo[key] = { ...r, dt };
     }
   });
-  return Object.values(porCavalo).filter(r => r.entrada);
+
+  // Apenas cavalos que entraram (estão no pátio)
+  const noPatio = Object.values(porCavalo).filter(r => r.entrada);
+
+  // Cruzamento de carreta: se cavalo A entrou carregado com carreta X,
+  // e depois outro cavalo B saiu com a mesma carreta X em data/hora >= entrada do A,
+  // então cavalo A deve aparecer como VAZIO (a carreta foi embora com outro)
+  return noPatio.map(reg => {
+    if (!reg.carreta || reg.carreta === 'CAVALO' || reg.situacao !== 'carregado') return reg;
+
+    const carretaReg = reg.carreta.toUpperCase();
+    const dtEntrada = reg.data + (reg.entrada || '');
+
+    // Verificar se essa carreta saiu com outro cavalo depois da entrada deste
+    const carretaSaiuComOutro = regs.some(r =>
+      r.cavalo !== reg.cavalo &&
+      r.carreta && r.carreta.toUpperCase() === carretaReg &&
+      r.saida &&
+      (r.data + r.saida) >= dtEntrada
+    );
+
+    if (carretaSaiuComOutro) {
+      return { ...reg, situacao: 'vazio', _carretaTransferida: true };
+    }
+    return reg;
+  });
 }
 
 function abrirPatio() {
@@ -2005,11 +2028,12 @@ function renderPatio() {
   if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' no pátio';
 
   el.innerHTML = patio.map(r => `
-    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center">
+    <div style="background:#102040;border:1px solid ${r._carretaTransferida ? '#E65100' : '#1565C030'};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em">${r.cavalo}</div>
       <div>
         <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">Entrada</div>
         <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.entrada}</div>
+        ${r._carretaTransferida ? `<div style="font-size:10px;color:#FFB74D;margin-top:2px">⚠️ Carreta ${r.carreta} saiu com outro cavalo</div>` : ''}
       </div>
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}">${r.situacao==='carregado'?'Carregado':'Vazio'}</span>
     </div>
