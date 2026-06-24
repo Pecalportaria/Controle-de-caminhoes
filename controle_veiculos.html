@@ -738,7 +738,7 @@ function turnoAtivo() {
 
 // Verifica se É ESTE dispositivo que está com o turno ativo
 function euEstouLogado() {
-  const meuNome = sessionStorage.getItem('meu_turno');
+  const meuNome = localStorage.getItem('meu_turno');
   return meuNome && _turnoAtual && _turnoAtual.nome === meuNome;
 }
 
@@ -817,7 +817,7 @@ async function confirmarLoginTurno() {
 
   try {
     await window._setDoc(window._doc('config', 'turno'), { nome: p.nome, inicio: Date.now() });
-    sessionStorage.setItem('meu_turno', p.nome); // registrar neste dispositivo quem logou
+    localStorage.setItem('meu_turno', p.nome); // registrar neste dispositivo quem logou
     document.getElementById('login-overlay').classList.remove('open');
     toast('Turno iniciado — ' + p.nome);
   } catch(e) {
@@ -835,7 +835,7 @@ function fazerLogoutTurno() {
     if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
     try {
       await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0 });
-      sessionStorage.removeItem('meu_turno');
+      localStorage.removeItem('meu_turno');
       document.getElementById('turno-ativo-overlay').classList.remove('open');
       toast('Turno finalizado');
     } catch(e) {
