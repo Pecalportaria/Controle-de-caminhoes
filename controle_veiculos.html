@@ -1381,10 +1381,11 @@ function confirmarSalvar() {
     }
   }
 
-  // Verificar duplicata: mesmo cavalo + motorista + hora (qualquer data do ano)
+  // Verificar duplicata: mesmo cavalo + motorista + data + hora
   const duplicata = regs.find(r =>
     r.cavalo === vals.cavalo &&
     r.motorista === vals.motorista &&
+    r.data === vals.data &&
     (
       (vals.entrada && r.entrada && r.entrada === vals.entrada) ||
       (vals.saida   && r.saida   && r.saida   === vals.saida)
@@ -1472,6 +1473,7 @@ function _inconsContinuar() {
   const duplicata = regs.find(r =>
     r.cavalo === vals.cavalo &&
     r.motorista === vals.motorista &&
+    r.data === vals.data &&
     ((vals.entrada && r.entrada && r.entrada === vals.entrada) ||
      (vals.saida   && r.saida   && r.saida   === vals.saida))
   );
