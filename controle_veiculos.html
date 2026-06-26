@@ -218,16 +218,12 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .pill{font-size:14px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.04em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase}
 .pill-car{background:#1B5E20;color:#FFFFFF;border:1px solid #1B5E20}
 .pill-vaz{background:#B71C1C;color:#FFFFFF;border:1px solid #B71C1C}
-.reg-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto auto}
-.reg-cell{padding:8px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px solid #64B5F6;border-collapse:collapse;min-height:48px;gap:3px}
-.reg-cell:nth-child(even){border-right:none;border-top:none}
-.reg-cell:nth-child(odd){border-left:none;border-top:none}
-.reg-grid .reg-cell:nth-child(1),.reg-grid .reg-cell:nth-child(2){border-top:none}
-.reg-nome{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#FFFFFF;letter-spacing:.02em;line-height:1.2}
-.reg-dest{font-size:11px;font-weight:600;color:#90CAF9;line-height:1.2}
-.pill{font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;letter-spacing:.04em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase}
+.reg-grid{display:grid;grid-template-columns:1fr 1fr;width:100%}
+.reg-cell{padding:10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px solid #64B5F6;min-height:52px;gap:2px}
+.reg-cell-label{font-size:12px;font-weight:700;color:#90A4AE;text-transform:uppercase;letter-spacing:.06em}
+.reg-cell-val{font-family:'Barlow Condensed',sans-serif;font-weight:800;color:#FFFFFF;letter-spacing:.06em}
 .meta-label{font-size:11px;font-weight:700;color:#90A4AE;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
-.meta-val{font-size:16px;font-weight:700;color:#FFFFFF;font-variant-numeric:tabular-nums;font-family:'Barlow Condensed',sans-serif}
+.meta-val{font-size:20px;font-weight:700;color:#FFFFFF;font-variant-numeric:tabular-nums;font-family:'Barlow Condensed',sans-serif}
 .btn-edit{background:none;border:none;cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;font-weight:700;color:#42A5F5;width:100%}
 .btn-del{background:none;border:none;cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;font-weight:700;color:#EF9A9A;width:100%}
 .truck-card{position:relative;width:100%;display:block}
@@ -242,7 +238,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .meta-item:nth-child(even){border-right:none}
 .meta-item.force-border{border-right:1px solid #BBDEFB !important}
 .meta-label{font-size:11px;font-weight:700;color:#90A4AE;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
-.meta-val{font-size:16px;font-weight:700;color:#FFFFFF;font-variant-numeric:tabular-nums;font-family:'Barlow Condensed',sans-serif}
+.meta-val{font-size:20px;font-weight:700;color:#FFFFFF;font-variant-numeric:tabular-nums;font-family:'Barlow Condensed',sans-serif}
 .meta-sep{grid-column:1/-1;height:1px;background:#BBDEFB}
 
 
@@ -1775,28 +1771,61 @@ function renderLista() {
     return;
   }
   el.innerHTML = list.map(r => {
-    const horBadge = r.entrada
-      ? `<div style="background:#1B5E20;color:#FFFFFF;display:inline-block;padding:2px 10px;border-radius:14px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Entrada</div>`
-      : r.saida
-        ? `<div style="background:#B71C1C;color:#FFFFFF;display:inline-block;padding:2px 10px;border-radius:14px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Saída</div>`
-        : '—';
+    const bgEnt = r.entrada ? 'background:#1B5E20' : 'background:#0D2744';
+    const bgSai = r.saida   ? 'background:#B71C1C' : 'background:#0D2744';
+    const bgCar = r.situacao === 'carregado' ? 'background:#1B5E20' : 'background:#0D2744';
+    const bgVaz = r.situacao === 'vazio'     ? 'background:#B71C1C' : 'background:#0D2744';
     return `
     <div class="reg-card">
       <div class="reg-grid">
-        <div class="reg-cell" ondblclick="abrirHistoricoMotorista('${r.motorista.replace(/'/g,"\\'")}')">
-          <div class="reg-nome">${r.motorista}</div>
-          <div class="reg-dest">${r.destino||'—'}</div>
+
+        <!-- Linha 1: Cavalo | Carreta -->
+        <div class="reg-cell" ondblclick="abrirHistoricoCavalo('${r.cavalo}')">
+          <div class="reg-cell-label">Cavalo</div>
+          <div class="reg-cell-val" style="font-size:20px">${r.cavalo}</div>
         </div>
         <div class="reg-cell">
-          ${horBadge}
-          <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="margin-top:6px">${r.situacao==='carregado'?'Carregado':'Vazio'}</span>
+          <div class="reg-cell-label">Carreta</div>
+          <div class="reg-cell-val" style="font-size:20px">${r.carreta||'—'}</div>
         </div>
-        <div class="reg-cell" ondblclick="abrirHistoricoCavalo('${r.cavalo}')"><div class="meta-label">Cavalo</div><div class="meta-val">${r.cavalo}</div></div>
-        <div class="reg-cell"><div class="meta-label">Carreta</div><div class="meta-val">${r.carreta||'—'}</div></div>
-        <div class="reg-cell"><div class="meta-label">Data</div><div class="meta-val">${fmtD(r.data)}</div></div>
-        <div class="reg-cell"><div class="meta-label">Hora</div><div class="meta-val">${r.entrada||r.saida||'—'}</div></div>
-        <div class="reg-cell" style="min-height:32px;padding:4px 10px"><button class="btn-edit" onclick="editReg(${r.id})">Editar</button></div>
-        <div class="reg-cell" style="min-height:32px;padding:4px 10px"><button class="btn-del" onclick="delReg(${r.id})">Remover</button></div>
+
+        <!-- Linha 2: Motorista (mesclado) -->
+        <div class="reg-cell" style="grid-column:1/-1;cursor:pointer" ondblclick="abrirHistoricoMotorista('${r.motorista.replace(/'/g,"\\'")}')">
+          <div class="reg-cell-val" style="font-size:20px">${r.motorista}</div>
+        </div>
+
+        <!-- Linha 3: Data (mesclado) -->
+        <div class="reg-cell" style="grid-column:1/-1">
+          <div class="reg-cell-val" style="font-size:20px">${fmtD(r.data)}</div>
+        </div>
+
+        <!-- Linha 4: Entrada | Saída -->
+        <div class="reg-cell" style="${bgEnt}">
+          <div class="reg-cell-label" style="color:${r.entrada?'#A5D6A7':'#546E7A'}">Entrada</div>
+          <div class="reg-cell-val" style="font-size:20px">${r.entrada||'—'}</div>
+        </div>
+        <div class="reg-cell" style="${bgSai}">
+          <div class="reg-cell-label" style="color:${r.saida?'#FFCDD2':'#546E7A'}">Saída</div>
+          <div class="reg-cell-val" style="font-size:20px">${r.saida||'—'}</div>
+        </div>
+
+        <!-- Linha 5: Carregado | Vazio -->
+        <div class="reg-cell" style="${bgCar}">
+          <div class="reg-cell-val" style="font-size:16px;text-transform:uppercase">Carregado</div>
+        </div>
+        <div class="reg-cell" style="${bgVaz}">
+          <div class="reg-cell-val" style="font-size:16px;text-transform:uppercase">Vazio</div>
+        </div>
+
+        <!-- Linha 6: Destino (mesclado) -->
+        <div class="reg-cell" style="grid-column:1/-1">
+          <div class="reg-cell-val" style="font-size:16px;color:#FFFFFF">${r.destino||'—'}</div>
+        </div>
+
+        <!-- Linha 7: Editar | Remover -->
+        <div class="reg-cell" style="min-height:36px;padding:4px 8px"><button class="btn-edit" onclick="editReg(${r.id})">Editar</button></div>
+        <div class="reg-cell" style="min-height:36px;padding:4px 8px"><button class="btn-del" onclick="delReg(${r.id})">Remover</button></div>
+
       </div>
     </div>
   `}).join('');
