@@ -525,6 +525,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
     <div style="display:flex;gap:10px">
       <button onclick="_escolherTipoCarreta('CAVALO')" style="flex:1;padding:14px;background:#1565C0;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-transform:uppercase">Cavalo</button>
       <button onclick="_escolherTipoCarreta('TRUCK')" style="flex:1;padding:14px;background:#546E7A;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-transform:uppercase">Truck</button>
+      <button onclick="_abrirBitremDoModal()" style="flex:1;padding:14px;background:#37474F;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-transform:uppercase">Bitrem</button>
     </div>
   </div>
 </div>
@@ -1576,15 +1577,20 @@ function avancarStep() {
   if (stepAtual===7 && !validarCarreta(vals.carreta)) { toast('Carreta: placa 4 dígitos ou Bitrem/Truck/Cavalo'); return; }
   // Se carreta vazia ou igual ao cavalo → perguntar Cavalo ou Truck
   if (stepAtual===7 && (!vals.carreta || vals.carreta === vals.cavalo)) {
-    document.getElementById('carreta-tipo-overlay').classList.add('open');
+    // Fechar teclado antes de abrir modal
+    document.activeElement && document.activeElement.blur();
+    setTimeout(() => document.getElementById('carreta-tipo-overlay').classList.add('open'), 150);
     return;
   }
   // Se digitou BITREM → abrir modal das duas carretas
   if (stepAtual===7 && vals.carreta && vals.carreta.toUpperCase() === 'BITREM') {
-    document.getElementById('bitrem-c1').value = '';
-    document.getElementById('bitrem-c2').value = '';
-    document.getElementById('bitrem-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('bitrem-c1').focus(), 100);
+    document.activeElement && document.activeElement.blur();
+    setTimeout(() => {
+      document.getElementById('bitrem-c1').value = '';
+      document.getElementById('bitrem-c2').value = '';
+      document.getElementById('bitrem-overlay').classList.add('open');
+      setTimeout(() => document.getElementById('bitrem-c1').focus(), 200);
+    }, 150);
     return;
   }
   if (stepAtual===7) {
@@ -1978,8 +1984,15 @@ function renderHistorico() {
 function _escolherTipoCarreta(tipo) {
   document.getElementById('carreta-tipo-overlay').classList.remove('open');
   vals.carreta = tipo;
-  stepAtual++;
-  renderStep();
+  abrirRevisao();
+}
+
+function _abrirBitremDoModal() {
+  document.getElementById('carreta-tipo-overlay').classList.remove('open');
+  document.getElementById('bitrem-c1').value = '';
+  document.getElementById('bitrem-c2').value = '';
+  document.getElementById('bitrem-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('bitrem-c1').focus(), 200);
 }
 
 // ── Modal Bitrem (duas carretas) ───────────────────────
@@ -1992,14 +2005,11 @@ function _confirmarBitrem() {
   const c2 = document.getElementById('bitrem-c2').value.trim().toUpperCase();
   if (!c1 || c1.length !== 4) { toast('Informe a placa da Carreta 1 (4 dígitos)'); return; }
   if (!c2 || c2.length !== 4) { toast('Informe a placa da Carreta 2 (4 dígitos)'); return; }
+  document.activeElement && document.activeElement.blur();
   document.getElementById('bitrem-overlay').classList.remove('open');
-  // Salvar como "C1+C2" para identificar no pátio
   vals.carreta = c1 + '/' + c2;
-  vals.carreta2 = c2; // segunda carreta para controle do pátio
-  stepAtual++;
-  renderStep();
+  setTimeout(() => abrirRevisao(), 50);
 }
-
 
 let _senhaCallback = null;
 
