@@ -710,6 +710,16 @@ function fmtD(d) { if(!d) return '—'; const [y,m,dd]=d.split('-'); return dd+'
 
 if(!vals.data) vals.data = hoje();
 document.getElementById('filtro-data').value = hoje();
+
+// Desabilitar botão "Limpar" do input date
+const inputData = document.getElementById('filtro-data');
+inputData.addEventListener('change', function(e) {
+  // Se tentar limpar (valor vazio), restaura a data anterior
+  if (!this.value) {
+    this.value = hoje();
+    renderLista();
+  }
+});
 document.getElementById('ano-badge').textContent = new Date().getFullYear();
 
 function toast(msg) {
