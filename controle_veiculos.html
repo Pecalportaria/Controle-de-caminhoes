@@ -210,7 +210,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .btn-csv{padding:10px 14px;background:#0D1F3C;border:1px solid #1565C040;border-radius:var(--radius);font-size:13px;font-weight:600;color:#42A5F5;cursor:pointer;font-family:'Barlow',sans-serif}
 .lista-body{padding:12px 16px;background:#0A1628;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
 
-.reg-card{background:#0D2744;border:2px solid #FFFFFF;border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;animation:up .18s ease}
+.reg-card{background:#0D2744;border:3px double #FFFFFF;border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;animation:up .18s ease}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .reg-top{padding:12px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
 .reg-nome{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:#FFFFFF;letter-spacing:.02em}
@@ -1668,6 +1668,15 @@ function showTab(t) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
   ['registrar','lista','historico'].forEach((n,i) => { if(n===t) document.querySelectorAll('.tab')[i].classList.add('active'); });
+  
+  // Mostrar/ocultar header baseado na aba
+  const header = document.querySelector('.header');
+  if (t === 'registrar') {
+    header.style.display = 'block';
+  } else {
+    header.style.display = 'none';
+  }
+  
   const hh = (document.querySelector('.header')?.offsetHeight||0) + (document.querySelector('.tabs')?.offsetHeight||0);
   const avail = window.innerHeight - hh;
   if (t==='lista') {
@@ -1828,10 +1837,17 @@ function renderLista() {
     return;
   }
   el.innerHTML = list.map(r => {
-    const bgEnt = r.entrada ? 'background:#1B5E20' : 'background:#0D2744';
-    const bgSai = r.saida   ? 'background:#B71C1C' : 'background:#0D2744';
-    const bgCar = r.situacao === 'carregado' ? 'background:#1B5E20' : 'background:#0D2744';
-    const bgVaz = r.situacao === 'vazio'     ? 'background:#B71C1C' : 'background:#0D2744';
+    // Determinar movimento (entrada ou saída)
+    const temEntrada = r.entrada ? true : false;
+    const horarioMovimento = r.entrada || r.saida || '—';
+    const corBorderMovimento = temEntrada ? '#43A047' : '#E53935';
+    const corFundoMovimento = temEntrada ? '#1B5E20' : '#B71C1C';
+    
+    // Determinar situação (carregado ou vazio)
+    const situacao = r.situacao === 'carregado' ? 'Carregado' : 'Vazio';
+    const corBorderSituacao = r.situacao === 'carregado' ? '#43A047' : '#E53935';
+    const corFundoSituacao = r.situacao === 'carregado' ? '#1B5E20' : '#B71C1C';
+    
     return `
     <div class="reg-card">
       <div class="reg-grid">
@@ -1851,35 +1867,21 @@ function renderLista() {
           <div class="reg-cell-val" style="font-size:20px">${r.motorista}</div>
         </div>
 
-        <!-- Linha 3: Data (mesclado) -->
-        <div class="reg-cell" style="grid-column:1/-1">
-          <div class="reg-cell-val" style="font-size:20px">${fmtD(r.data)}</div>
+        <!-- Linha 3: Entrada/Saída | Carregado/Vazio -->
+        <div class="reg-cell" style="background:${corFundoMovimento};border:2px solid ${corBorderMovimento};min-height:40px;padding:6px 8px">
+          <div class="reg-cell-label" style="color:#A5D6A7;font-weight:700;font-size:11px">${temEntrada ? 'Entrada' : 'Saída'}</div>
+          <div class="reg-cell-val" style="font-size:18px;color:#fff">${horarioMovimento}</div>
+        </div>
+        <div class="reg-cell" style="background:${corFundoSituacao};border:2px solid ${corBorderSituacao};min-height:40px;padding:6px 8px">
+          <div class="reg-cell-val" style="font-size:16px;color:#fff;text-transform:uppercase">${situacao}</div>
         </div>
 
-        <!-- Linha 4: Entrada | Saída -->
-        <div class="reg-cell" style="${bgEnt}">
-          <div class="reg-cell-label" style="color:${r.entrada?'#A5D6A7':'#546E7A'}">Entrada</div>
-          <div class="reg-cell-val" style="font-size:20px">${r.entrada||'—'}</div>
-        </div>
-        <div class="reg-cell" style="${bgSai}">
-          <div class="reg-cell-label" style="color:${r.saida?'#FFCDD2':'#546E7A'}">Saída</div>
-          <div class="reg-cell-val" style="font-size:20px">${r.saida||'—'}</div>
-        </div>
-
-        <!-- Linha 5: Carregado | Vazio -->
-        <div class="reg-cell" style="${bgCar}">
-          <div class="reg-cell-val" style="font-size:16px;text-transform:uppercase">Carregado</div>
-        </div>
-        <div class="reg-cell" style="${bgVaz}">
-          <div class="reg-cell-val" style="font-size:16px;text-transform:uppercase">Vazio</div>
-        </div>
-
-        <!-- Linha 6: Destino (mesclado) -->
+        <!-- Linha 4: Destino (mesclado) -->
         <div class="reg-cell" style="grid-column:1/-1">
           <div class="reg-cell-val" style="font-size:20px;color:#FFFFFF">${r.destino||'—'}</div>
         </div>
 
-        <!-- Linha 7: Editar | Remover -->
+        <!-- Linha 5: Editar | Remover -->
         <div class="reg-cell" style="min-height:36px;padding:4px 8px"><button class="btn-edit" onclick="editReg(${r.id})">Editar</button></div>
         <div class="reg-cell" style="min-height:36px;padding:4px 8px"><button class="btn-del" onclick="delReg(${r.id})">Remover</button></div>
 
