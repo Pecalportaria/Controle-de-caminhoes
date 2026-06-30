@@ -54,9 +54,9 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, or
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
   --navy:#0A1628;--blue:#1565C0;--blue2:#1E88E5;
-  --green:#1B5E20;--green-light:#E8F5E9;--green-text:#2E7D32;
+  --green:#2E7D32;--green-light:#E8F5E9;--green-text:#2E7D32;
   --amber:#E65100;--amber-light:#FFF3E0;--amber-text:#BF360C;
-  --red:#B71C1C;--red-light:#FFEBEE;
+  --red:#C62828;--red-light:#FFEBEE;
   --surface:#FFFFFF;--border:#CFD8DC;
   --text:#0D1B2A;--text2:#37474F;--text3:#90A4AE;
   --radius:10px;--radius-lg:16px;
@@ -131,7 +131,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .painel-input::placeholder{color:#37474F}
 .painel-sit{display:flex;gap:8px;margin-bottom:10px}
 .painel-sit-btn{flex:1;padding:9px 0;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;border:2px solid #1565C040;border-radius:10px;background:#102040;color:#546E7A;cursor:pointer;text-transform:uppercase;letter-spacing:.06em;transition:all .15s}
-.painel-sit-btn.on-car{background:#1B5E2030;border-color:#388E3C;color:#81C784}
+.painel-sit-btn.on-car{background:#2E7D3230;border-color:#388E3C;color:#81C784}
 .painel-sit-btn.on-vaz{background:#E6510020;border-color:#F57C00;color:#FFB74D}
 .painel-nav{display:flex;align-items:center;justify-content:space-between}
 
@@ -179,10 +179,10 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 }
 .hora-btn .hora-btn-label{font-size:10px;color:#546E7A;margin-bottom:4px;letter-spacing:.1em}
 .hora-btn .hora-btn-val{font-size:22px;font-weight:800;color:#90A4AE;font-variant-numeric:tabular-nums}
-.hora-btn.sel-ent{border-color:#43A047;background:#1B5E20}
+.hora-btn.sel-ent{border-color:#43A047;background:#2E7D32}
 .hora-btn.sel-ent .hora-btn-label{color:#A5D6A7}
 .hora-btn.sel-ent .hora-btn-val{color:#fff}
-.hora-btn.sel-sai{border-color:#E53935;background:#B71C1C}
+.hora-btn.sel-sai{border-color:#E53935;background:#C62828}
 .hora-btn.sel-sai .hora-btn-label{color:#FFCDD2}
 .hora-btn.sel-sai .hora-btn-val{color:#fff}
 .hora-edit-wrap{margin-top:4px}
@@ -210,14 +210,14 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .btn-csv{padding:10px 14px;background:#0D1F3C;border:1px solid #1565C040;border-radius:var(--radius);font-size:13px;font-weight:600;color:#42A5F5;cursor:pointer;font-family:'Barlow',sans-serif}
 .lista-body{padding:12px 16px;background:#0A1628;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
 
-.reg-card{background:#0D2744;border:3px double #FFFFFF;border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;animation:up .18s ease}
+.reg-card{background:#0D2744;border:3px double #FFFFFF;border-radius:var(--radius-lg);margin-bottom:28px;overflow:hidden;animation:up .18s ease}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .reg-top{padding:12px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
 .reg-nome{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:#FFFFFF;letter-spacing:.02em}
 .reg-dest{font-size:13px;font-weight:600;color:#90CAF9;margin-top:2px}
 .pill{font-size:14px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.04em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase}
-.pill-car{background:#1B5E20;color:#FFFFFF;border:1px solid #1B5E20}
-.pill-vaz{background:#B71C1C;color:#FFFFFF;border:1px solid #B71C1C}
+.pill-car{background:#2E7D32;color:#FFFFFF;border:1px solid #2E7D32}
+.pill-vaz{background:#C62828;color:#FFFFFF;border:1px solid #C62828}
 .reg-grid{display:grid;grid-template-columns:1fr 1fr;width:100%}
 .reg-cell{padding:10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px solid #64B5F6;min-height:52px;gap:2px}
 .reg-cell-label{font-size:12px;font-weight:700;color:#90A4AE;text-transform:uppercase;letter-spacing:.06em}
@@ -265,7 +265,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .sit-inline{display:flex;flex:1}
 .sit-btn{flex:1;padding:12px 0;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;color:#546E7A;transition:all .15s;font-family:'Barlow Condensed',sans-serif;border-right:1px solid #64B5F6;text-transform:uppercase;letter-spacing:.04em}
 .sit-btn:last-child{border-right:none}
-.sit-btn.on-car{background:#1B5E2030;color:#81C784}
+.sit-btn.on-car{background:#2E7D3230;color:#81C784}
 .sit-btn.on-vaz{background:#E6510020;color:#FFB74D}
 .btn-save{width:100%;padding:14px;background:#1565C0;color:#fff;border:none;border-radius:var(--radius-lg);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
 
@@ -280,7 +280,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .hist-motor{color:#FFFFFF;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hist-hora{color:#42A5F5;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-align:right}
 .hist-sit{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
-.hist-sit.car{background:#1B5E20;color:#FFFFFF}
+.hist-sit.car{background:#2E7D32;color:#FFFFFF}
 .hist-sit.vaz{background:#E65100;color:#FFFFFF}
 
 .empty{text-align:center;padding:52px 24px;color:#546E7A}
@@ -331,7 +331,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
   <div class="lista-header">
     <div class="filter-bar" style="justify-content:center;gap:6px">
       <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:108px;padding:10px 6px;font-size:12px;border:2px solid #FFFFFF">
-      <button class="btn-csv" onclick="abrirPatio()" style="background:#1B5E20;color:#fff;border:2px solid #FFFFFF;padding:10px 8px;font-size:11px;flex:0 0 auto">PÁTIO</button>
+      <button class="btn-csv" onclick="abrirPatio()" style="background:#2E7D32;color:#fff;border:2px solid #FFFFFF;padding:10px 8px;font-size:11px;flex:0 0 auto">PÁTIO</button>
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:10px 8px;font-size:11px;flex:0 0 auto">💾 BACKUP</button>
       <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:10px 8px;font-size:11px;flex:0 0 auto">EXPORTAR</button>
     </div>
@@ -1851,49 +1851,54 @@ function renderLista() {
     const temEntrada = r.entrada ? true : false;
     const horarioMovimento = r.entrada || r.saida || '—';
     const corBorderMovimento = temEntrada ? '#43A047' : '#E53935';
-    const corFundoMovimento = temEntrada ? '#1B5E20' : '#B71C1C';
+    const corFundoMovimento = temEntrada ? '#2E7D32' : '#C62828';
     
     // Determinar situação (carregado ou vazio)
     const situacao = r.situacao === 'carregado' ? 'Carregado' : 'Vazio';
     const corBorderSituacao = r.situacao === 'carregado' ? '#43A047' : '#E53935';
-    const corFundoSituacao = r.situacao === 'carregado' ? '#1B5E20' : '#B71C1C';
+    const corFundoSituacao = r.situacao === 'carregado' ? '#2E7D32' : '#C62828';
     
     return `
     <div class="reg-card">
       <div class="reg-grid">
 
         <!-- Linha 1: Cavalo | Carreta -->
-        <div class="reg-cell" ondblclick="abrirHistoricoCavalo('${r.cavalo}')">
+        <div class="reg-cell" ondblclick="abrirHistoricoCavalo('${r.cavalo}')" style="min-height:40px">
           <div class="reg-cell-label">Cavalo</div>
           <div class="reg-cell-val" style="font-size:20px">${r.cavalo}</div>
         </div>
-        <div class="reg-cell">
+        <div class="reg-cell" style="min-height:40px">
           <div class="reg-cell-label">Carreta</div>
           <div class="reg-cell-val" style="font-size:20px">${r.carreta||'—'}</div>
         </div>
 
         <!-- Linha 2: Motorista (mesclado) -->
-        <div class="reg-cell" style="grid-column:1/-1;cursor:pointer" ondblclick="abrirHistoricoMotorista('${r.motorista.replace(/'/g,"\\'")}')">
+        <div class="reg-cell" style="grid-column:1/-1;cursor:pointer;min-height:40px" ondblclick="abrirHistoricoMotorista('${r.motorista.replace(/'/g,"\\'")}')">
           <div class="reg-cell-val" style="font-size:20px">${r.motorista}</div>
         </div>
 
         <!-- Linha 3: Entrada/Saída | Carregado/Vazio -->
-        <div class="reg-cell" style="background:${corFundoMovimento};border:2px solid ${corBorderMovimento};min-height:40px;padding:6px 8px">
-          <div class="reg-cell-label" style="color:#A5D6A7;font-weight:700;font-size:11px">${temEntrada ? 'Entrada' : 'Saída'}</div>
-          <div class="reg-cell-val" style="font-size:18px;color:#fff">${horarioMovimento}</div>
+        <div class="reg-cell" style="min-height:32px;padding:4px 8px">
+          <div class="reg-cell-label" style="font-size:14px">HORA</div>
+          <div class="reg-cell-val" style="font-size:20px;color:#fff">${horarioMovimento}</div>
         </div>
-        <div class="reg-cell" style="background:${corFundoSituacao};border:2px solid ${corBorderSituacao};min-height:40px;padding:6px 8px">
-          <div class="reg-cell-val" style="font-size:16px;color:#fff;text-transform:uppercase">${situacao}</div>
+        <div class="reg-cell" style="min-height:32px;padding:4px 8px;gap:4px">
+          <div style="background:${corFundoMovimento};border:2px solid ${corBorderMovimento};border-radius:50px;padding:3px 14px;display:flex;align-items:center;justify-content:center">
+            <div class="reg-cell-val" style="color:#fff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.1em">${temEntrada ? 'Entrada' : 'Saída'}</div>
+          </div>
+          <div style="background:${corFundoSituacao};border:2px solid ${corBorderSituacao};border-radius:50px;padding:3px 14px;display:flex;align-items:center;justify-content:center">
+            <div class="reg-cell-val" style="font-size:12px;color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:.1em">${situacao}</div>
+          </div>
         </div>
 
         <!-- Linha 4: Destino (mesclado) -->
-        <div class="reg-cell" style="grid-column:1/-1">
+        <div class="reg-cell" style="grid-column:1/-1;min-height:40px">
           <div class="reg-cell-val" style="font-size:20px;color:#FFFFFF">${r.destino||'—'}</div>
         </div>
 
         <!-- Linha 5: Editar | Remover -->
-        <div class="reg-cell" style="min-height:36px;padding:4px 8px"><button class="btn-edit" onclick="editReg(${r.id})">Editar</button></div>
-        <div class="reg-cell" style="min-height:36px;padding:4px 8px"><button class="btn-del" onclick="delReg(${r.id})">Remover</button></div>
+        <div class="reg-cell" style="min-height:30px;padding:2px 8px"><button class="btn-edit" onclick="editReg(${r.id})">Editar</button></div>
+        <div class="reg-cell" style="min-height:30px;padding:2px 8px"><button class="btn-del" onclick="delReg(${r.id})">Remover</button></div>
 
       </div>
     </div>
