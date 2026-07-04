@@ -78,7 +78,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .header-sub{font-size:11px;color:#546E7A;margin-top:2px;letter-spacing:.03em}
 
 /* TABS */
-.tabs{display:flex;background:#0D1F3C;border-bottom:1px solid #64B5F6}
+.tabs{display:flex;background:#0D1F3C;border-bottom:1px solid #64B5F6;position:sticky;top:0;z-index:30}
 .tab{flex:1;padding:10px 0;font-size:13px;font-weight:600;color:#546E7A;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-family:'Barlow',sans-serif;letter-spacing:.02em}
 .tab.active{color:#42A5F5;border-bottom-color:#42A5F5}
 
@@ -211,7 +211,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* LISTA */
-.lista-header{flex-shrink:0;background:#0A1628;padding:12px 16px 10px;border-bottom:1px solid #64B5F6;z-index:20;position:sticky;top:0}
+.lista-header{flex-shrink:0;background:#0A1628;padding:12px 16px 10px;border-bottom:1px solid #64B5F6;z-index:20;position:sticky;top:41px}
 .filter-bar{display:flex;gap:8px}
 .filter-bar input[type="date"]{flex:1;padding:10px 12px;border:1px solid #90CAF9;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:13px;background:#0D1F3C;color:#fff;outline:none}
 .btn-csv{padding:10px 14px;background:#0D1F3C;border:1px solid #1565C040;border-radius:var(--radius);font-size:13px;font-weight:600;color:#42A5F5;cursor:pointer;font-family:'Barlow',sans-serif}
