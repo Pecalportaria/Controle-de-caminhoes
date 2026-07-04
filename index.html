@@ -339,6 +339,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
     <div class="filter-bar" style="justify-content:center;gap:6px">
       <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:108px;padding:10px 6px;font-size:12px;border:2px solid #FFFFFF">
       <button class="btn-csv" onclick="abrirPatio()" style="background:#2E7D32;color:#fff;border:2px solid #FFFFFF;padding:10px 8px;font-size:11px;flex:0 0 auto">PÁTIO</button>
+      <button class="btn-csv" onclick="abrirRua()" style="background:#C62828;color:#fff;border:2px solid #FFFFFF;padding:10px 8px;font-size:11px;flex:0 0 auto">RUA</button>
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:10px 8px;font-size:11px;flex:0 0 auto">💾 BACKUP</button>
       <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:10px 8px;font-size:11px;flex:0 0 auto">EXPORTAR</button>
     </div>
@@ -534,6 +535,20 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
   </div>
 </div>
 
+<!-- MODAL RUA -->
+<div class="modal-overlay" id="rua-overlay">
+  <div class="modal" style="padding-bottom:0;display:flex;flex-direction:column;max-height:85vh">
+    <div style="flex-shrink:0">
+      <div class="modal-title">
+        <span>🛣️ RUA</span>
+        <button class="modal-close" onclick="document.getElementById('rua-overlay').classList.remove('open')">✕</button>
+      </div>
+      <div style="font-size:12px;color:#546E7A;margin-bottom:12px" id="rua-resumo">Caminhões atualmente na rua</div>
+    </div>
+    <div id="rua-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
+  </div>
+</div>
+
 <!-- MODAL ESCOLHA CAVALO OU TRUCK -->
 <div class="modal-overlay" id="carreta-tipo-overlay" style="align-items:center;padding:0 24px">
   <div style="background:#0D1F3C;border-radius:var(--radius-lg);width:100%;max-width:340px;padding:24px 20px;border:1px solid #1565C040">
@@ -666,6 +681,7 @@ function iniciarFirebase() {
     localStorage.setItem('ctrl_v2', JSON.stringify(regs));
     renderLista();
     if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
+    if (document.getElementById('rua-overlay')?.classList.contains('open')) renderRua();
   }, (err) => {
     console.error('Firestore erro:', err);
     toast('Erro de conexão — usando dados locais');
@@ -1866,6 +1882,7 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 function renderLista() {
   // Atualizar pátio se estiver aberto
   if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
+    if (document.getElementById('rua-overlay')?.classList.contains('open')) renderRua();
   const fd = g('filtro-data');
   const list = (fd ? regs.filter(r=>r.data===fd) : regs)
     .slice().sort((a,b) => {
@@ -2201,6 +2218,59 @@ function renderPatio() {
         <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">Entrada</div>
         <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.entrada}</div>
         ${r._carretaTransferida ? `<div style="font-size:10px;color:#FFB74D;margin-top:2px">⚠️ Carreta ${r.carreta} saiu com outro cavalo</div>` : ''}
+      </div>
+      <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}">${r.situacao==='carregado'?'Carregado':'Vazio'}</span>
+    </div>
+  `).join('');
+}
+
+// ── Rua — caminhões fora da empresa ───────────────
+function calcularRua() {
+  // Para cada cavalo, pegar o registro mais recente
+  const porCavalo = {};
+  regs.forEach(r => {
+    if (!r.cavalo) return;
+    const key = r.cavalo.toUpperCase();
+    const dt = r.data + (r.entrada || r.saida || '');
+    if (!porCavalo[key] || dt > porCavalo[key].dt) {
+      porCavalo[key] = { ...r, dt };
+    }
+  });
+
+  // Apenas cavalos cujo último movimento foi saída (estão na rua)
+  return Object.values(porCavalo).filter(r => r.saida);
+}
+
+function abrirRua() {
+  renderRua();
+  document.getElementById('rua-overlay').classList.add('open');
+}
+
+function renderRua() {
+  const el = document.getElementById('rua-lista');
+  const resumoEl = document.getElementById('rua-resumo');
+  const rua = calcularRua().sort((a,b) => {
+    const da = a.data + a.saida;
+    const db = b.data + b.saida;
+    return da > db ? 1 : da < db ? -1 : 0;
+  });
+
+  if (!rua.length) {
+    if (resumoEl) resumoEl.textContent = 'Nenhum caminhão na rua';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🛣️</div><p>Nenhum caminhão na rua</p></div>';
+    return;
+  }
+
+  const total = rua.length;
+  if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' na rua';
+
+  el.innerHTML = rua.map(r => `
+    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em">${r.cavalo}</div>
+      <div>
+        <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">Saída</div>
+        <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.saida}</div>
+        <div style="font-size:12px;color:#90CAF9;margin-top:2px">${r.motorista||'—'}</div>
       </div>
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}">${r.situacao==='carregado'?'Carregado':'Vazio'}</span>
     </div>
