@@ -377,6 +377,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
       <input type="text" id="hist-motorista" placeholder="Nome do motorista"
         autocomplete="off"
         onfocus="this.value='';document.getElementById('hist-cavalo').value='';document.getElementById('hist-carreta').value='';renderHistorico()"
+        onkeydown="this._ultimaTecla=event.key"
         oninput="autocompletarMotoristaHist(this)"
         style="flex:1;padding:7px 10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:13px;background:#0D1F3C;color:#fff;outline:none">
     </div>
@@ -1044,6 +1045,7 @@ function semAcento(str) {
 }
 
 // ── Autocompletar motorista no histórico ─────────────
+// ── Limpar campo motorista do histórico via botão X ──
 function autocompletarMotoristaHist(inp) {
   inp.value = inp.value.toUpperCase();
   document.getElementById('hist-cavalo').value = '';
