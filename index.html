@@ -523,6 +523,49 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
   </div>
 </div>
 
+<!-- MODAL BANCO DE DADOS DE PLACAS -->
+<div class="modal-overlay" id="banco-overlay">
+  <div class="modal" style="padding-bottom:0;display:flex;flex-direction:column;max-height:85vh">
+    <div style="flex-shrink:0">
+      <div class="modal-title">
+        <span>🗄️ Banco de Placas</span>
+        <button class="modal-close" onclick="document.getElementById('banco-overlay').classList.remove('open')">✕</button>
+      </div>
+      <div style="font-size:12px;color:#546E7A;margin-bottom:14px">Cadastro protegido por senha. Consulta livre para todos.</div>
+
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="text" id="banco-cavalo-novo" placeholder="Ex: 1D71" maxlength="4" autocomplete="off"
+          oninput="this.value=this.value.toUpperCase()"
+          style="flex:1;padding:10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.1em;background:#0D1F3C;color:#fff;outline:none;text-transform:uppercase">
+        <button class="btn-salvar" style="flex:0 0 auto;padding:10px 16px" onclick="cadastrarCavaloBanco()">Cadastrar</button>
+      </div>
+
+      <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px" id="banco-resumo">Placas cadastradas</div>
+    </div>
+    <div id="banco-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAÇÃO SIM/NÃO -->
+<div class="modal-overlay" id="confirmar-overlay">
+  <div class="modal" style="max-width:320px;margin:0 auto">
+    <div class="modal-title"><span id="confirmar-titulo">Confirmar</span></div>
+    <div id="confirmar-mensagem" style="font-size:14px;color:#B0BEC5;margin-bottom:18px"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-csv" style="flex:1;padding:12px;text-align:center" onclick="_confirmarNao()">Não</button>
+      <button class="btn-salvar" style="flex:1;padding:12px" onclick="_confirmarSim()">Sim</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL STATUS DO BACKUP -->
+<div class="modal-overlay" id="backup-status-overlay">
+  <div class="modal" style="max-width:320px;margin:0 auto">
+    <div id="backup-status-conteudo"></div>
+    <button class="btn-salvar" style="width:100%;margin-top:18px" onclick="document.getElementById('backup-status-overlay').classList.remove('open')">OK</button>
+  </div>
+</div>
+
 <!-- MODAL CONFIGURAÇÕES -->
 <div class="modal-overlay" id="config-overlay">
   <div class="modal">
@@ -534,6 +577,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
       <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
+      <button class="btn-csv" onclick="abrirBancoCavalos()" style="background:#6A1B9A20;border-color:#8E24AA40;color:#CE93D8;padding:14px;font-size:14px;text-align:center">🗄️ BANCO DE DADOS — PLACAS</button>
     </div>
   </div>
 </div>
@@ -718,6 +762,7 @@ let stepAtual = 1;
 const totalSteps = 7;
 let regs = []; // dados carregados do Firestore
 let ajustesPatio = []; // ajustes manuais de inclusão/retirada do pátio
+let cavalosCadastrados = []; // banco de dados de placas de cavalo cadastradas
 let _fbIniciado = false;
 
 // Inicializar listener do Firestore quando Firebase estiver pronto
@@ -748,6 +793,15 @@ function iniciarFirebase() {
     if (document.getElementById('ajuste-patio-overlay')?.classList.contains('open')) renderListaAjustes();
   }, (err) => {
     console.error('Firestore erro (ajustesPatio):', err);
+  });
+
+  // Listener em tempo real para o banco de dados de placas cadastradas
+  const q3 = window._col('cavalosCadastrados');
+  window._onSnapshot(q3, (snap) => {
+    cavalosCadastrados = snap.docs.map(d => d.data());
+    if (document.getElementById('banco-overlay')?.classList.contains('open')) renderBancoCavalos();
+  }, (err) => {
+    console.error('Firestore erro (cavalosCadastrados):', err);
   });
 }
 
@@ -1757,6 +1811,7 @@ function resetForm() {
 }
 
 async function addReg() {
+  const cavaloDigitado = vals.cavalo;
   const reg = {
     id: Date.now(),
     cavalo: vals.cavalo, carreta: vals.carreta || 'CAVALO',
@@ -1769,6 +1824,15 @@ async function addReg() {
   resetForm();
   toast('Registro adicionado! ✓');
   await salvarReg(reg);
+
+  // Se a placa do cavalo não estiver no banco de dados, oferece cadastrá-la
+  if (cavaloDigitado && !cavaloExisteNoBanco(cavaloDigitado)) {
+    confirmarAcao(
+      'Placa não cadastrada',
+      'A placa ' + cavaloDigitado.toUpperCase() + ' não está no banco de dados. Deseja cadastrar agora?',
+      (sim) => { if (sim) cadastrarCavaloComSenha(cavaloDigitado, null, false); }
+    );
+  }
 }
 
 function showTab(t) {
@@ -1937,6 +2001,15 @@ async function salvarEdicao() {
   const regAtualizado = regs[idx];
   salvar(); fecharModal(); renderLista(); toast('Atualizado!');
   await salvarReg(regAtualizado);
+
+  // Se a placa do cavalo não estiver no banco de dados, oferece cadastrá-la
+  if (cav && !cavaloExisteNoBanco(cav)) {
+    confirmarAcao(
+      'Placa não cadastrada',
+      'A placa ' + cav.toUpperCase() + ' não está no banco de dados. Deseja cadastrar agora?',
+      (sim) => { if (sim) cadastrarCavaloComSenha(cav, null, false); }
+    );
+  }
 }
 
 document.getElementById('modal-overlay').addEventListener('click', function(e) {
@@ -2190,26 +2263,53 @@ function solicitarSenhaBackup() {
 
 function fazerBackup() {
   if (!regs.length) { toast('Nenhum registro para fazer backup'); return; }
-  const backup = {
-    versao: '1.0',
-    data: new Date().toISOString(),
-    total: regs.length,
-    registros: regs
-  };
-  const json = JSON.stringify(backup, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const a = document.createElement('a');
-  const agora = new Date();
-  const nome = 'backup_transpecal_' +
-    agora.getFullYear() + '-' +
-    String(agora.getMonth()+1).padStart(2,'0') + '-' +
-    String(agora.getDate()).padStart(2,'0') + '_' +
-    String(agora.getHours()).padStart(2,'0') +
-    String(agora.getMinutes()).padStart(2,'0') + '.json';
-  a.href = URL.createObjectURL(blob);
-  a.download = nome;
-  a.click();
-  toast('Backup salvo: ' + regs.length + ' registros');
+  try {
+    const backup = {
+      versao: '1.0',
+      data: new Date().toISOString(),
+      total: regs.length,
+      registros: regs
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const a = document.createElement('a');
+    const agora = new Date();
+    const nome = 'backup_transpecal_' +
+      agora.getFullYear() + '-' +
+      String(agora.getMonth()+1).padStart(2,'0') + '-' +
+      String(agora.getDate()).padStart(2,'0') + '_' +
+      String(agora.getHours()).padStart(2,'0') +
+      String(agora.getMinutes()).padStart(2,'0') + '.json';
+    a.href = URL.createObjectURL(blob);
+    a.download = nome;
+    a.click();
+    toast('Backup salvo: ' + regs.length + ' registros');
+    mostrarSucessoBackup(regs.length, nome);
+  } catch(e) {
+    console.error('Erro ao fazer backup:', e);
+    mostrarErroBackup();
+  }
+}
+
+function mostrarSucessoBackup(total, nome) {
+  const el = document.getElementById('backup-status-conteudo');
+  el.innerHTML = `
+    <div style="font-size:48px;text-align:center;margin-bottom:10px">✅</div>
+    <div style="font-size:16px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px">Backup concluído com sucesso!</div>
+    <div style="font-size:13px;color:#90A4AE;text-align:center">${total} registro${total !== 1 ? 's' : ''} salvo${total !== 1 ? 's' : ''}</div>
+    <div style="font-size:12px;color:#546E7A;text-align:center;margin-top:4px;word-break:break-all">${nome}</div>
+  `;
+  document.getElementById('backup-status-overlay').classList.add('open');
+}
+
+function mostrarErroBackup() {
+  const el = document.getElementById('backup-status-conteudo');
+  el.innerHTML = `
+    <div style="font-size:48px;text-align:center;margin-bottom:10px">⚠️</div>
+    <div style="font-size:16px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px">Falha ao gerar o backup</div>
+    <div style="font-size:13px;color:#90A4AE;text-align:center">Tente novamente. Se persistir, avise o suporte.</div>
+  `;
+  document.getElementById('backup-status-overlay').classList.add('open');
 }
 
 // ── Pátio — caminhões dentro da empresa ───────────────
@@ -2327,6 +2427,40 @@ function confirmarAjustePatio(tipo) {
   });
 }
 
+// Remove uma placa do banco de dados (usado ao vender o cavalo).
+// pedirConfirmacaoSenha=true -> ação isolada, exige senha própria (ex: botão manual no banco)
+// pedirConfirmacaoSenha=false -> ação já autenticada por outra etapa (ex: ajuste de retirada do pátio)
+async function removerCavaloDoBanco(cavalo, pedirConfirmacaoSenha = true) {
+  const key = (cavalo || '').trim().toUpperCase();
+  if (!key || !cavaloExisteNoBanco(key)) return;
+
+  const executar = async () => {
+    try {
+      if (window._fbReady) {
+        await window._deleteDoc(window._doc('cavalosCadastrados', key));
+      } else {
+        cavalosCadastrados = cavalosCadastrados.filter(c => c.cavalo !== key);
+      }
+      toast('Placa ' + key + ' removida do banco de dados (venda)');
+      renderBancoCavalos();
+    } catch(e) {
+      console.error('Erro ao remover placa do banco:', e);
+      toast('Erro ao remover placa do banco de dados');
+    }
+  };
+
+  if (!pedirConfirmacaoSenha) { await executar(); return; }
+
+  const t = getTurno();
+  if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
+  const porteiros = getPorteiros();
+  const p = porteiros.find(x => x.nome === t.nome);
+  pedirSenha('Remover placa', 'Digite a senha de ' + t.nome + ' para remover ' + key + ' do banco de dados', async function(senha) {
+    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+    await executar();
+  });
+}
+
 async function salvarAjustePatio(ajuste) {
   try {
     if (window._fbReady) {
@@ -2337,6 +2471,12 @@ async function salvarAjustePatio(ajuste) {
       ajustesPatio.push(ajuste);
     }
     toast(ajuste.tipo === 'incluir' ? 'Cavalo incluído no pátio' : 'Cavalo retirado do pátio');
+
+    // Se for retirada do pátio por venda do cavalo, remove também do banco de dados
+    if (ajuste.tipo === 'retirar' && /vend/i.test(ajuste.motivo || '')) {
+      await removerCavaloDoBanco(ajuste.cavalo, false);
+    }
+
     document.getElementById('ajp-cavalo').value = '';
     document.getElementById('ajp-motivo').value = '';
     renderListaAjustes();
@@ -2388,6 +2528,117 @@ function removerAjustePatio(cavalo) {
       toast('Erro ao remover ajuste');
     }
   });
+}
+
+// ── Modal genérico de confirmação Sim/Não ─────────────
+let _confirmarCallback = null;
+function confirmarAcao(titulo, mensagem, callback) {
+  document.getElementById('confirmar-titulo').textContent = titulo;
+  document.getElementById('confirmar-mensagem').textContent = mensagem;
+  _confirmarCallback = callback;
+  document.getElementById('confirmar-overlay').classList.add('open');
+}
+function _confirmarSim() {
+  document.getElementById('confirmar-overlay').classList.remove('open');
+  const cb = _confirmarCallback;
+  _confirmarCallback = null;
+  if (cb) cb(true);
+}
+function _confirmarNao() {
+  document.getElementById('confirmar-overlay').classList.remove('open');
+  const cb = _confirmarCallback;
+  _confirmarCallback = null;
+  if (cb) cb(false);
+}
+
+// ── Banco de dados de placas cadastradas ──────────────
+function cavaloExisteNoBanco(cavalo) {
+  const key = (cavalo || '').trim().toUpperCase();
+  if (!key) return true; // sem placa, não há o que checar
+  return cavalosCadastrados.some(c => c.cavalo === key);
+}
+
+function abrirBancoCavalos() {
+  document.getElementById('banco-cavalo-novo').value = '';
+  renderBancoCavalos();
+  document.getElementById('banco-overlay').classList.add('open');
+}
+
+function renderBancoCavalos() {
+  const el = document.getElementById('banco-lista');
+  const resumoEl = document.getElementById('banco-resumo');
+  const lista = [...cavalosCadastrados].sort((a,b) => a.cavalo.localeCompare(b.cavalo, 'pt-BR', {numeric:true}));
+
+  if (!lista.length) {
+    if (resumoEl) resumoEl.textContent = 'Nenhuma placa cadastrada';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🗄️</div><p>Nenhuma placa cadastrada ainda</p></div>';
+    return;
+  }
+
+  if (resumoEl) resumoEl.textContent = lista.length + ' placa' + (lista.length !== 1 ? 's' : '') + ' cadastrada' + (lista.length !== 1 ? 's' : '');
+
+  el.innerHTML = lista.map(c => `
+    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:#FFD600;letter-spacing:.12em">${c.cavalo}</div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:#546E7A">${fmtD(c.dataCadastro)}</div>
+        <div style="font-size:10px;color:#546E7A">por ${c.porteiro||'—'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Fluxo de cadastro protegido por senha, reutilizável (tela de config e auto-prompt)
+// adicionarAoPatio: true quando cadastrado manualmente (caminhão novo, sem passar pela portaria)
+//                    false quando originado de um registro real de entrada/saída (já reflete sozinho no pátio/rua)
+function cadastrarCavaloComSenha(cavalo, aposCadastrar, adicionarAoPatio = true) {
+  const key = cavalo.trim().toUpperCase();
+  if (!key) { toast('Informe a placa do cavalo'); return; }
+  if (cavaloExisteNoBanco(key)) { toast('Placa já cadastrada no banco de dados'); return; }
+
+  const t = getTurno();
+  if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
+  const porteiros = getPorteiros();
+  const p = porteiros.find(x => x.nome === t.nome);
+
+  pedirSenha('Cadastrar placa', 'Digite a senha de ' + t.nome + ' para cadastrar ' + key + ' no banco de dados', async function(senha) {
+    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+    try {
+      const registro = { cavalo: key, dataCadastro: hoje(), porteiro: t.nome };
+      if (window._fbReady) {
+        await window._setDoc(window._doc('cavalosCadastrados', key), registro);
+      } else {
+        cavalosCadastrados = cavalosCadastrados.filter(c => c.cavalo !== key);
+        cavalosCadastrados.push(registro);
+      }
+      // Inclui automaticamente no Pátio apenas quando cadastrado manualmente
+      // (caminhão comprado/novo que ainda não passou pela portaria)
+      if (adicionarAoPatio) {
+        await salvarAjustePatio({
+          cavalo: key,
+          tipo: 'incluir',
+          carreta: '',
+          motorista: '',
+          situacao: 'vazio',
+          motivo: 'Novo cadastro no banco de dados',
+          data: hoje(),
+          hora: horaAgora(),
+          porteiro: t.nome
+        });
+      }
+      toast('Placa ' + key + ' cadastrada com sucesso!');
+      renderBancoCavalos();
+      if (aposCadastrar) aposCadastrar();
+    } catch(e) {
+      console.error('Erro ao cadastrar placa:', e);
+      toast('Erro ao cadastrar placa');
+    }
+  });
+}
+
+function cadastrarCavaloBanco() {
+  const inp = document.getElementById('banco-cavalo-novo');
+  cadastrarCavaloComSenha(inp.value, () => { inp.value = ''; });
 }
 
 function abrirConfiguracoes() {
