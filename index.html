@@ -111,6 +111,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 
 /* PAINEL DESLIZANTE */
 .painel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;align-items:flex-end;transition:padding-bottom .15s ease}
+.painel-overlay.teclado-aberto{align-items:flex-start;padding-top:10px}
 .painel-overlay.open{display:flex}
 .painel-form{
   background:#0D1F3C;
@@ -252,6 +253,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;align-items:flex-end;transition:padding-bottom .15s ease}
+.modal-overlay.teclado-aberto{align-items:flex-start;padding-top:10px}
 .modal-overlay.open{display:flex}
 .modal{background:#0D1F3C;border-radius:var(--radius-lg) var(--radius-lg) 0 0;width:100%;max-height:90vh;overflow-y:auto;padding:20px 16px 40px;border-top:2px solid #1565C0}
 .modal-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;letter-spacing:.04em}
@@ -528,7 +530,10 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
     <div style="flex-shrink:0">
       <div class="modal-title">
         <span>🏭 PÁTIO</span>
-        <button class="modal-close" onclick="document.getElementById('patio-overlay').classList.remove('open')">✕</button>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="modal-close" onclick="abrirAjustePatio()" title="Ajuste manual" style="font-size:18px">⚙️</button>
+          <button class="modal-close" onclick="document.getElementById('patio-overlay').classList.remove('open')">✕</button>
+        </div>
       </div>
       <div style="font-size:12px;color:#546E7A;margin-bottom:12px" id="patio-resumo">Caminhões atualmente dentro da empresa</div>
     </div>
@@ -547,6 +552,38 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
       <div style="font-size:12px;color:#546E7A;margin-bottom:12px" id="rua-resumo">Caminhões atualmente na rua</div>
     </div>
     <div id="rua-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
+  </div>
+</div>
+
+<!-- MODAL AJUSTE MANUAL DO PÁTIO -->
+<div class="modal-overlay" id="ajuste-patio-overlay">
+  <div class="modal" style="padding-bottom:0;display:flex;flex-direction:column;max-height:85vh">
+    <div style="flex-shrink:0">
+      <div class="modal-title">
+        <span>🔧 Ajuste Manual — Pátio</span>
+        <button class="modal-close" onclick="document.getElementById('ajuste-patio-overlay').classList.remove('open')">✕</button>
+      </div>
+      <div style="font-size:12px;color:#546E7A;margin-bottom:14px">Use quando um caminhão entrar ou sair sem passar pela portaria (compra/venda de veículo, por exemplo). Protegido por senha.</div>
+
+      <div class="form-row"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="ajp-cavalo" maxlength="4" autocomplete="off" placeholder="Ex: 1D71" oninput="this.value=this.value.toUpperCase()"></div></div>
+      <div class="form-row"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="ajp-carreta" maxlength="7" autocomplete="off" placeholder="Opcional" oninput="limiteCarreta(this)"></div></div>
+      <div class="form-row"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="ajp-motorista" autocomplete="off" placeholder="Opcional" oninput="this.value=this.value.toUpperCase()"></div></div>
+
+      <div style="display:flex;gap:8px;margin:12px 0">
+        <button type="button" id="ajp-sit-car" class="painel-sit-btn" onclick="setAjpSituacao('carregado')">Carregado</button>
+        <button type="button" id="ajp-sit-vaz" class="painel-sit-btn on-vaz" onclick="setAjpSituacao('vazio')">Vazio</button>
+      </div>
+
+      <div class="form-row" style="border-bottom:none"><div class="form-label">Motivo</div><div class="form-input-wrap"><input type="text" id="ajp-motivo" autocomplete="off" placeholder="Ex: Caminhão vendido / comprado"></div></div>
+
+      <div style="display:flex;gap:8px;margin:16px 0 14px">
+        <button class="btn-salvar" style="flex:1;background:#2E7D32" onclick="confirmarAjustePatio('incluir')">➕ Incluir no Pátio</button>
+        <button class="btn-salvar" style="flex:1;background:#C62828" onclick="confirmarAjustePatio('retirar')">➖ Retirar do Pátio</button>
+      </div>
+
+      <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ajustes ativos</div>
+    </div>
+    <div id="ajustes-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
   </div>
 </div>
 
@@ -666,6 +703,7 @@ let editId = null;
 let stepAtual = 1;
 const totalSteps = 7;
 let regs = []; // dados carregados do Firestore
+let ajustesPatio = []; // ajustes manuais de inclusão/retirada do pátio
 let _fbIniciado = false;
 
 // Inicializar listener do Firestore quando Firebase estiver pronto
@@ -686,6 +724,16 @@ function iniciarFirebase() {
   }, (err) => {
     console.error('Firestore erro:', err);
     toast('Erro de conexão — usando dados locais');
+  });
+
+  // Listener em tempo real para ajustes manuais do pátio
+  const q2 = window._col('ajustesPatio');
+  window._onSnapshot(q2, (snap) => {
+    ajustesPatio = snap.docs.map(d => d.data());
+    if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
+    if (document.getElementById('ajuste-patio-overlay')?.classList.contains('open')) renderListaAjustes();
+  }, (err) => {
+    console.error('Firestore erro (ajustesPatio):', err);
   });
 }
 
@@ -2190,6 +2238,144 @@ function calcularPatio() {
   });
 }
 
+// Aplica os ajustes manuais (incluir/retirar) por cima do cálculo automático do pátio
+function aplicarAjustesPatio(listaPatio) {
+  if (!ajustesPatio.length) return listaPatio;
+
+  const mapa = {};
+  listaPatio.forEach(r => { mapa[r.cavalo.toUpperCase()] = r; });
+
+  ajustesPatio.forEach(aj => {
+    const key = (aj.cavalo || '').toUpperCase();
+    if (!key) return;
+    if (aj.tipo === 'retirar') {
+      delete mapa[key];
+    } else if (aj.tipo === 'incluir') {
+      mapa[key] = {
+        cavalo: key,
+        carreta: aj.carreta || '',
+        entrada: aj.hora || '',
+        data: aj.data || hoje(),
+        situacao: aj.situacao || 'vazio',
+        motorista: aj.motorista || '',
+        destino: aj.motivo ? ('Ajuste manual: ' + aj.motivo) : 'Ajuste manual',
+        _ajusteManual: true
+      };
+    }
+  });
+
+  return Object.values(mapa);
+}
+
+// ── Ajuste manual do Pátio (protegido por senha) ──────
+let ajpSituacaoAtual = 'vazio';
+function setAjpSituacao(s) {
+  ajpSituacaoAtual = s;
+  document.getElementById('ajp-sit-car').classList.toggle('on-car', s === 'carregado');
+  document.getElementById('ajp-sit-vaz').classList.toggle('on-vaz', s === 'vazio');
+}
+
+function abrirAjustePatio() {
+  document.getElementById('ajp-cavalo').value = '';
+  document.getElementById('ajp-carreta').value = '';
+  document.getElementById('ajp-motorista').value = '';
+  document.getElementById('ajp-motivo').value = '';
+  setAjpSituacao('vazio');
+  renderListaAjustes();
+  document.getElementById('ajuste-patio-overlay').classList.add('open');
+}
+
+function confirmarAjustePatio(tipo) {
+  const cavalo = document.getElementById('ajp-cavalo').value.trim().toUpperCase();
+  const motivo = document.getElementById('ajp-motivo').value.trim();
+  if (!cavalo) { toast('Informe a placa do cavalo'); return; }
+  if (!motivo) { toast('Informe o motivo do ajuste'); return; }
+
+  const t = getTurno();
+  if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
+  const porteiros = getPorteiros();
+  const p = porteiros.find(x => x.nome === t.nome);
+
+  const acaoTexto = tipo === 'incluir' ? 'incluir' : 'retirar';
+  pedirSenha('Ajuste manual do pátio', 'Digite a senha de ' + t.nome + ' para ' + acaoTexto + ' o cavalo ' + cavalo, function(senha) {
+    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+    salvarAjustePatio({
+      cavalo,
+      tipo,
+      carreta: document.getElementById('ajp-carreta').value.trim().toUpperCase(),
+      motorista: document.getElementById('ajp-motorista').value.trim().toUpperCase(),
+      situacao: ajpSituacaoAtual,
+      motivo,
+      data: hoje(),
+      hora: horaAgora(),
+      porteiro: t.nome
+    });
+  });
+}
+
+async function salvarAjustePatio(ajuste) {
+  try {
+    if (window._fbReady) {
+      await window._setDoc(window._doc('ajustesPatio', ajuste.cavalo), ajuste);
+    } else {
+      // fallback local se Firestore não estiver disponível
+      ajustesPatio = ajustesPatio.filter(a => a.cavalo !== ajuste.cavalo);
+      ajustesPatio.push(ajuste);
+    }
+    toast(ajuste.tipo === 'incluir' ? 'Cavalo incluído no pátio' : 'Cavalo retirado do pátio');
+    document.getElementById('ajp-cavalo').value = '';
+    document.getElementById('ajp-motivo').value = '';
+    renderListaAjustes();
+    renderPatio();
+  } catch(e) {
+    console.error('Erro ao salvar ajuste de pátio:', e);
+    toast('Erro ao salvar ajuste');
+  }
+}
+
+function renderListaAjustes() {
+  const el = document.getElementById('ajustes-lista');
+  if (!el) return;
+  if (!ajustesPatio.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🔧</div><p>Nenhum ajuste manual ativo</p></div>';
+    return;
+  }
+  el.innerHTML = ajustesPatio.map(a => `
+    <div style="background:#102040;border:1px solid ${a.tipo==='incluir'?'#2E7D32':'#C62828'};border-radius:var(--radius-lg);padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;color:#FFD600;letter-spacing:.1em">${a.cavalo}</div>
+        <div style="font-size:11px;color:${a.tipo==='incluir'?'#81C784':'#EF9A9A'};font-weight:700;text-transform:uppercase">${a.tipo==='incluir'?'Incluído':'Retirado'} — ${fmtD(a.data)} ${a.hora}</div>
+        <div style="font-size:11px;color:#90A4AE;margin-top:2px">${a.motivo||''}</div>
+        <div style="font-size:10px;color:#546E7A;margin-top:2px">por ${a.porteiro||'—'}</div>
+      </div>
+      <button onclick="removerAjustePatio('${a.cavalo}')" style="background:none;border:1px solid #546E7A50;color:#90A4AE;border-radius:8px;padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap">Restaurar auto</button>
+    </div>
+  `).join('');
+}
+
+function removerAjustePatio(cavalo) {
+  const t = getTurno();
+  if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
+  const porteiros = getPorteiros();
+  const p = porteiros.find(x => x.nome === t.nome);
+  pedirSenha('Remover ajuste', 'Digite a senha de ' + t.nome + ' para restaurar o cálculo automático de ' + cavalo, async function(senha) {
+    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+    try {
+      if (window._fbReady) {
+        await window._deleteDoc(window._doc('ajustesPatio', cavalo));
+      } else {
+        ajustesPatio = ajustesPatio.filter(a => a.cavalo !== cavalo);
+      }
+      toast('Ajuste removido — voltou ao cálculo automático');
+      renderListaAjustes();
+      renderPatio();
+    } catch(e) {
+      console.error('Erro ao remover ajuste:', e);
+      toast('Erro ao remover ajuste');
+    }
+  });
+}
+
 function abrirPatio() {
   renderPatio();
   document.getElementById('patio-overlay').classList.add('open');
@@ -2198,7 +2384,7 @@ function abrirPatio() {
 function renderPatio() {
   const el = document.getElementById('patio-lista');
   const resumoEl = document.getElementById('patio-resumo');
-  const patio = calcularPatio().sort((a,b) => {
+  const patio = aplicarAjustesPatio(calcularPatio()).sort((a,b) => {
     const da = a.data + a.entrada;
     const db = b.data + b.entrada;
     return da > db ? 1 : da < db ? -1 : 0;
@@ -2214,12 +2400,13 @@ function renderPatio() {
   if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' no pátio';
 
   el.innerHTML = patio.map(r => `
-    <div style="background:#102040;border:1px solid ${r._carretaTransferida ? '#E65100' : '#1565C030'};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center">
+    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#8E24AA' : (r._carretaTransferida ? '#E65100' : '#1565C030')};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em">${r.cavalo}</div>
       <div>
-        <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">Entrada</div>
+        <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">${r._ajusteManual ? 'Ajuste manual' : 'Entrada'}</div>
         <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.entrada}</div>
         ${r._carretaTransferida ? `<div style="font-size:10px;color:#FFB74D;margin-top:2px">⚠️ Carreta ${r.carreta} saiu com outro cavalo</div>` : ''}
+        ${r._ajusteManual ? `<div style="font-size:10px;color:#CE93D8;margin-top:2px">🔧 ${r.destino}</div>` : ''}
       </div>
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}">${r.situacao==='carregado'?'Carregado':'Vazio'}</span>
     </div>
@@ -2283,24 +2470,38 @@ renderLista();
 atualizarTurnoBar();
 
 // ── Evitar que o teclado virtual cubra o campo ativo ──
-if (window.visualViewport) {
-  const ajustarParaTeclado = () => {
-    const vv = window.visualViewport;
-    const alturaTeclado = window.innerHeight - vv.height - vv.offsetTop;
-    const offset = alturaTeclado > 80 ? alturaTeclado : 0; // só considera teclado se diferença for significativa
-    document.querySelectorAll('.modal-overlay.open, .painel-overlay.open').forEach(ov => {
-      ov.style.paddingBottom = offset + 'px';
-    });
-  };
-  window.visualViewport.addEventListener('resize', ajustarParaTeclado);
-  window.visualViewport.addEventListener('scroll', ajustarParaTeclado);
+// Estratégia: ao focar em qualquer campo dentro de um painel/modal, o próprio
+// painel/modal é movido para o TOPO da tela (em vez de ficar embaixo), ficando
+// sempre acima do teclado — não depende de medir a altura do teclado.
+(function() {
+  let timeoutBlur = null;
 
-  // Reagir também quando um overlay é aberto (caso o teclado já esteja visível)
-  const overlayObserver = new MutationObserver(ajustarParaTeclado);
-  document.querySelectorAll('.modal-overlay, .painel-overlay').forEach(ov => {
-    overlayObserver.observe(ov, { attributes: true, attributeFilter: ['class'] });
+  function overlayDoCampo(el) {
+    return el.closest('.painel-overlay, .modal-overlay');
+  }
+
+  document.addEventListener('focusin', function(e) {
+    const el = e.target;
+    if (!el || !['INPUT','TEXTAREA','SELECT'].includes(el.tagName)) return;
+    const overlay = overlayDoCampo(el);
+    if (!overlay) return;
+    if (timeoutBlur) { clearTimeout(timeoutBlur); timeoutBlur = null; }
+    overlay.classList.add('teclado-aberto');
   });
-}
+
+  document.addEventListener('focusout', function(e) {
+    const el = e.target;
+    if (!el || !['INPUT','TEXTAREA','SELECT'].includes(el.tagName)) return;
+    const overlay = overlayDoCampo(el);
+    if (!overlay) return;
+    // Pequeno atraso: se o foco for para outro campo do mesmo painel, não pisca
+    timeoutBlur = setTimeout(() => {
+      const focoAtual = document.activeElement;
+      const aindaDentro = focoAtual && overlayDoCampo(focoAtual) === overlay;
+      if (!aindaDentro) overlay.classList.remove('teclado-aberto');
+    }, 150);
+  });
+})();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
