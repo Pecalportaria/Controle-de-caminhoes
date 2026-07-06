@@ -421,19 +421,19 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
       <button class="modal-close" onclick="fecharModal()">✕</button>
     </div>
     <div class="form-card">
-      <div class="form-row"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="e-cavalo" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
-      <div class="form-row"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="e-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div></div>
-      <div class="form-row"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="e-motorista" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
-      <div class="form-row"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="e-data" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"></div></div>
+      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="e-cavalo" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
+      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="e-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div></div>
+      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="e-motorista" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
+      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="e-data" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"></div></div>
       <div class="form-row">
         <div class="form-label">Horário</div>
         <div class="hora-wrap">
-          <div class="hora-col"><span class="hora-label">Entrada</span><input type="text" id="e-entrada" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
-          <div class="hora-col"><span class="hora-label">Saída</span><input type="text" id="e-saida" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
+          <div class="hora-col" onclick="document.getElementById('e-entrada').focus()" style="cursor:text"><span class="hora-label">Entrada</span><input type="text" id="e-entrada" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
+          <div class="hora-col" onclick="document.getElementById('e-saida').focus()" style="cursor:text"><span class="hora-label">Saída</span><input type="text" id="e-saida" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
         </div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="e-sit-car" onclick="setEditSit('carregado')">Carregado</button><button class="sit-btn" id="e-sit-vaz" onclick="setEditSit('vazio')">Vazio</button></div></div>
-      <div class="form-row" style="border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="e-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
+      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text;border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="e-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent;position:relative;z-index:2"></div></div>
     </div>
     <button class="btn-save" onclick="salvarEdicao()">Salvar alterações</button>
   </div>
@@ -529,7 +529,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
     <div style="flex-shrink:0">
       <div class="modal-title">
         <span>🗄️ Banco de Placas</span>
-        <button class="modal-close" onclick="document.getElementById('banco-overlay').classList.remove('open')">✕</button>
+        <button class="modal-close" onclick="fecharBancoEConfig()">✕</button>
       </div>
       <div style="font-size:12px;color:#546E7A;margin-bottom:14px">Cadastro protegido por senha. Consulta livre para todos.</div>
 
@@ -539,6 +539,8 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
           style="flex:1;padding:10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.1em;background:#0D1F3C;color:#fff;outline:none;text-transform:uppercase">
         <button class="btn-salvar" style="flex:0 0 auto;padding:10px 16px" onclick="cadastrarCavaloBanco()">Cadastrar</button>
       </div>
+
+      <button class="btn-csv" onclick="importarPlacasDoHistorico()" style="width:100%;padding:10px;font-size:12px;margin-bottom:14px">🔄 Importar placas já usadas no histórico</button>
 
       <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px" id="banco-resumo">Placas cadastradas</div>
     </div>
@@ -2313,6 +2315,8 @@ function mostrarErroBackup() {
 }
 
 // ── Pátio — caminhões dentro da empresa ───────────────
+let _ultimoEventoPorCavalo = {}; // cache do último evento real (entrada ou saída) de cada cavalo
+
 function calcularPatio() {
   // Para cada cavalo, pegar o registro mais recente
   const porCavalo = {};
@@ -2324,9 +2328,12 @@ function calcularPatio() {
       porCavalo[key] = { ...r, dt };
     }
   });
+  _ultimoEventoPorCavalo = porCavalo; // guarda para o aplicarAjustesPatio saber se há evento real mais novo
 
-  // Apenas cavalos que entraram (estão no pátio)
-  const noPatio = Object.values(porCavalo).filter(r => r.entrada);
+  // Apenas cavalos que entraram E cujo registro mais recente NÃO tem saída
+  // (proteção extra: caso um registro tenha entrada e saída preenchidas ao mesmo tempo,
+  // considera que o caminhão já saiu, não mostrando indevidamente no pátio)
+  const noPatio = Object.values(porCavalo).filter(r => r.entrada && !r.saida);
 
   // Cruzamento de carreta: se cavalo A entrou carregado com carreta X,
   // e depois outro cavalo B saiu com a mesma carreta X em data/hora >= entrada do A,
@@ -2352,7 +2359,10 @@ function calcularPatio() {
   });
 }
 
-// Aplica os ajustes manuais (incluir/retirar) por cima do cálculo automático do pátio
+// Aplica os ajustes manuais (incluir/retirar) por cima do cálculo automático do pátio.
+// Um ajuste manual só é aplicado se NÃO houver um evento REAL (entrada/saída registrada
+// na portaria) mais recente do que ele — assim, se o caminhão sair de verdade depois de
+// um "incluir" manual, o sistema respeita a saída real e para de mostrá-lo no pátio.
 function aplicarAjustesPatio(listaPatio) {
   if (!ajustesPatio.length) return listaPatio;
 
@@ -2362,6 +2372,15 @@ function aplicarAjustesPatio(listaPatio) {
   ajustesPatio.forEach(aj => {
     const key = (aj.cavalo || '').toUpperCase();
     if (!key) return;
+
+    const ajusteDt = (aj.data || '') + (aj.hora || '');
+    const ultimoReal = _ultimoEventoPorCavalo[key];
+    const realDt = ultimoReal ? ultimoReal.dt : '';
+
+    // Se já existe um evento real (entrada/saída) mais recente que o ajuste manual,
+    // o ajuste está desatualizado — ignora e mantém o cálculo automático.
+    if (realDt && realDt > ajusteDt) return;
+
     if (aj.tipo === 'retirar') {
       delete mapa[key];
     } else if (aj.tipo === 'incluir') {
@@ -2379,6 +2398,7 @@ function aplicarAjustesPatio(listaPatio) {
   });
 
   return Object.values(mapa);
+
 }
 
 // ── Ajuste manual do Pátio (protegido por senha) ──────
@@ -2558,6 +2578,68 @@ function cavaloExisteNoBanco(cavalo) {
   return cavalosCadastrados.some(c => c.cavalo === key);
 }
 
+// Importa para o banco de dados as placas de cavalo que já aparecem no
+// histórico de registros (entradas/saídas), mas ainda não estão cadastradas.
+function importarPlacasDoHistorico() {
+  const jaCadastradas = new Set(cavalosCadastrados.map(c => c.cavalo));
+  const encontradasNoHistorico = {}; // cavalo -> data mais antiga encontrada
+
+  regs.forEach(r => {
+    if (!r.cavalo) return;
+    const key = r.cavalo.trim().toUpperCase();
+    if (!key || jaCadastradas.has(key)) return;
+    if (!encontradasNoHistorico[key] || r.data < encontradasNoHistorico[key]) {
+      encontradasNoHistorico[key] = r.data;
+    }
+  });
+
+  const novasPlacas = Object.keys(encontradasNoHistorico).sort((a,b) => a.localeCompare(b, 'pt-BR', {numeric:true}));
+
+  if (!novasPlacas.length) {
+    toast('Nenhuma placa nova encontrada no histórico');
+    return;
+  }
+
+  confirmarAcao(
+    'Importar do histórico',
+    'Encontramos ' + novasPlacas.length + ' placa' + (novasPlacas.length !== 1 ? 's' : '') + ' no histórico que ainda não ' + (novasPlacas.length !== 1 ? 'estão' : 'está') + ' no banco de dados: ' + novasPlacas.join(', ') + '. Deseja cadastrá-las agora?',
+    (sim) => {
+      if (!sim) return;
+
+      const t = getTurno();
+      if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
+      const porteiros = getPorteiros();
+      const p = porteiros.find(x => x.nome === t.nome);
+
+      pedirSenha('Importar placas', 'Digite a senha de ' + t.nome + ' para cadastrar ' + novasPlacas.length + ' placa(s) do histórico', async function(senha) {
+        if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+        let sucesso = 0;
+        for (const cavalo of novasPlacas) {
+          try {
+            const registro = { cavalo, dataCadastro: encontradasNoHistorico[cavalo] || hoje(), porteiro: t.nome + ' (importado)' };
+            if (window._fbReady) {
+              await window._setDoc(window._doc('cavalosCadastrados', cavalo), registro);
+            } else {
+              cavalosCadastrados = cavalosCadastrados.filter(c => c.cavalo !== cavalo);
+              cavalosCadastrados.push(registro);
+            }
+            sucesso++;
+          } catch(e) {
+            console.error('Erro ao importar placa ' + cavalo + ':', e);
+          }
+        }
+        toast(sucesso + ' placa' + (sucesso !== 1 ? 's' : '') + ' importada' + (sucesso !== 1 ? 's' : '') + ' do histórico!');
+        renderBancoCavalos();
+      });
+    }
+  );
+}
+
+function fecharBancoEConfig() {
+  document.getElementById('banco-overlay').classList.remove('open');
+  document.getElementById('config-overlay').classList.remove('open');
+}
+
 function abrirBancoCavalos() {
   document.getElementById('banco-cavalo-novo').value = '';
   renderBancoCavalos();
@@ -2653,11 +2735,9 @@ function abrirPatio() {
 function renderPatio() {
   const el = document.getElementById('patio-lista');
   const resumoEl = document.getElementById('patio-resumo');
-  const patio = aplicarAjustesPatio(calcularPatio()).sort((a,b) => {
-    const da = a.data + a.entrada;
-    const db = b.data + b.entrada;
-    return da > db ? 1 : da < db ? -1 : 0;
-  });
+  const patio = aplicarAjustesPatio(calcularPatio()).sort((a,b) =>
+    a.cavalo.localeCompare(b.cavalo, 'pt-BR', {numeric:true})
+  );
 
   if (!patio.length) {
     if (resumoEl) resumoEl.textContent = 'Nenhum caminhão no pátio';
@@ -2669,12 +2749,12 @@ function renderPatio() {
   if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' no pátio';
 
   el.innerHTML = patio.map(r => `
-    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#8E24AA' : (r._carretaTransferida ? '#E65100' : '#1565C030')};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center">
+    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#8E24AA' : '#1565C030'};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em">${r.cavalo}</div>
       <div>
         <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">${r._ajusteManual ? 'Ajuste manual' : 'Entrada'}</div>
         <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.entrada}</div>
-        ${r._carretaTransferida ? `<div style="font-size:10px;color:#FFB74D;margin-top:2px">⚠️ Carreta ${r.carreta} saiu com outro cavalo</div>` : ''}
+        <div style="font-size:12px;color:#90CAF9;margin-top:2px">${r.motorista||'—'}</div>
         ${r._ajusteManual ? `<div style="font-size:10px;color:#CE93D8;margin-top:2px">🔧 ${r.destino}</div>` : ''}
       </div>
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}">${r.situacao==='carregado'?'Carregado':'Vazio'}</span>
@@ -2695,8 +2775,33 @@ function calcularRua() {
     }
   });
 
-  // Apenas cavalos cujo último movimento foi saída (estão na rua)
-  return Object.values(porCavalo).filter(r => r.saida);
+  // Apenas cavalos cujo último movimento foi saída E não tem entrada registrada junto
+  // (mesma proteção usada no pátio, para casos de registro com os dois campos preenchidos)
+  return Object.values(porCavalo).filter(r => r.saida && !r.entrada);
+}
+
+// Aplica os ajustes manuais também na Rua: se um ajuste "incluir no pátio" for mais
+// recente que o último evento real, o cavalo deixa de aparecer na Rua (já que o
+// ajuste manual diz que ele está no pátio, evitando aparecer nos dois lugares ao mesmo tempo).
+function aplicarAjustesRua(listaRua) {
+  if (!ajustesPatio.length) return listaRua;
+
+  return listaRua.filter(r => {
+    const key = r.cavalo.toUpperCase();
+    const aj = ajustesPatio.find(a => (a.cavalo || '').toUpperCase() === key);
+    if (!aj || aj.tipo !== 'incluir') return true;
+
+    const ajusteDt = (aj.data || '') + (aj.hora || '');
+    const ultimoReal = _ultimoEventoPorCavalo[key];
+    const realDt = ultimoReal ? ultimoReal.dt : '';
+
+    // Se o evento real (saída) for mais recente que o ajuste manual, o ajuste
+    // está desatualizado — mantém o cavalo na Rua normalmente.
+    if (realDt && realDt > ajusteDt) return true;
+
+    // Ajuste manual "incluir" ainda válido — remove da Rua (ele está no pátio)
+    return false;
+  });
 }
 
 function abrirRua() {
@@ -2707,11 +2812,9 @@ function abrirRua() {
 function renderRua() {
   const el = document.getElementById('rua-lista');
   const resumoEl = document.getElementById('rua-resumo');
-  const rua = calcularRua().sort((a,b) => {
-    const da = a.data + a.saida;
-    const db = b.data + b.saida;
-    return da > db ? 1 : da < db ? -1 : 0;
-  });
+  const rua = aplicarAjustesRua(calcularRua()).sort((a,b) =>
+    a.cavalo.localeCompare(b.cavalo, 'pt-BR', {numeric:true})
+  );
 
   if (!rua.length) {
     if (resumoEl) resumoEl.textContent = 'Nenhum caminhão na rua';
