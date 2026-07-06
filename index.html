@@ -338,12 +338,11 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 <!-- LISTA -->
 <div class="section" id="tab-lista">
   <div class="lista-header">
-    <div class="filter-bar" style="justify-content:center;gap:4px;flex-wrap:nowrap">
-      <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:92px;padding:8px 4px;font-size:11px;border:2px solid #FFFFFF">
-      <button class="btn-csv" onclick="abrirPatio()" style="background:#2E7D32;color:#fff;border:2px solid #FFFFFF;padding:8px 6px;font-size:10px;flex:0 0 auto;white-space:nowrap">PÁTIO</button>
-      <button class="btn-csv" onclick="abrirRua()" style="background:#C62828;color:#fff;border:2px solid #FFFFFF;padding:8px 6px;font-size:10px;flex:0 0 auto;white-space:nowrap">RUA</button>
-      <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:8px 6px;font-size:10px;flex:0 0 auto;white-space:nowrap">BACKUP</button>
-      <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:8px 6px;font-size:10px;flex:0 0 auto;white-space:nowrap">EXPORTAR</button>
+    <div class="filter-bar" style="justify-content:center;gap:8px;flex-wrap:nowrap">
+      <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:116px;padding:11px 6px;font-size:13px;border:2px solid #FFFFFF">
+      <button class="btn-csv" onclick="abrirPatio()" style="background:#2E7D32;color:#fff;border:2px solid #FFFFFF;padding:11px 12px;font-size:13px;flex:0 0 auto;white-space:nowrap">PÁTIO</button>
+      <button class="btn-csv" onclick="abrirRua()" style="background:#C62828;color:#fff;border:2px solid #FFFFFF;padding:11px 12px;font-size:13px;flex:0 0 auto;white-space:nowrap">RUA</button>
+      <button class="btn-csv" onclick="abrirConfiguracoes()" title="Configurações" style="padding:11px 12px;font-size:15px;flex:0 0 auto;white-space:nowrap">⚙️</button>
     </div>
   </div>
   <div class="lista-body">
@@ -521,6 +520,21 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
       <button onclick="_salvarMesmoAssim()" style="flex:1;padding:11px;background:#F57C00;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase">Salvar assim</button>
     </div>
     <button onclick="_descartarRegistro()" style="width:100%;padding:11px;background:#8B1A1A;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.06em">Descartar registro</button>
+  </div>
+</div>
+
+<!-- MODAL CONFIGURAÇÕES -->
+<div class="modal-overlay" id="config-overlay">
+  <div class="modal">
+    <div class="modal-title">
+      <span>⚙️ Configurações</span>
+      <button class="modal-close" onclick="document.getElementById('config-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div style="font-size:12px;color:#546E7A;margin-bottom:16px">Ações administrativas e exportação de dados</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
+      <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
+    </div>
   </div>
 </div>
 
@@ -2374,6 +2388,10 @@ function removerAjustePatio(cavalo) {
       toast('Erro ao remover ajuste');
     }
   });
+}
+
+function abrirConfiguracoes() {
+  document.getElementById('config-overlay').classList.add('open');
 }
 
 function abrirPatio() {
