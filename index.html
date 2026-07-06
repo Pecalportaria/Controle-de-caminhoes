@@ -524,7 +524,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 </div>
 
 <!-- MODAL BANCO DE DADOS DE PLACAS -->
-<div class="modal-overlay" id="banco-overlay">
+<div class="modal-overlay" id="banco-overlay" style="z-index:410">
   <div class="modal" style="padding-bottom:0;display:flex;flex-direction:column;max-height:85vh">
     <div style="flex-shrink:0">
       <div class="modal-title">
@@ -547,7 +547,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 </div>
 
 <!-- MODAL CONFIRMAÇÃO SIM/NÃO -->
-<div class="modal-overlay" id="confirmar-overlay">
+<div class="modal-overlay" id="confirmar-overlay" style="z-index:420">
   <div class="modal" style="max-width:320px;margin:0 auto">
     <div class="modal-title"><span id="confirmar-titulo">Confirmar</span></div>
     <div id="confirmar-mensagem" style="font-size:14px;color:#B0BEC5;margin-bottom:18px"></div>
@@ -559,7 +559,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 </div>
 
 <!-- MODAL STATUS DO BACKUP -->
-<div class="modal-overlay" id="backup-status-overlay">
+<div class="modal-overlay" id="backup-status-overlay" style="z-index:410">
   <div class="modal" style="max-width:320px;margin:0 auto">
     <div id="backup-status-conteudo"></div>
     <button class="btn-salvar" style="width:100%;margin-top:18px" onclick="document.getElementById('backup-status-overlay').classList.remove('open')">OK</button>
@@ -685,7 +685,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 </div>
 
 <!-- MODAL SENHA -->
-<div class="modal-overlay" id="senha-overlay" style="align-items:center;padding:0 24px">
+<div class="modal-overlay" id="senha-overlay" style="align-items:center;padding:0 24px;z-index:430">
   <div style="background:#0D1F3C;border-radius:var(--radius-lg);width:100%;max-width:340px;padding:24px 20px;border:1px solid #1565C040">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:6px;letter-spacing:.04em" id="senha-titulo">Senha</div>
     <div style="font-size:12px;color:#546E7A;margin-bottom:16px" id="senha-subtitulo"></div>
