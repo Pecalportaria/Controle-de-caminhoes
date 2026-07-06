@@ -2649,7 +2649,7 @@ function abrirBancoCavalos() {
 function renderBancoCavalos() {
   const el = document.getElementById('banco-lista');
   const resumoEl = document.getElementById('banco-resumo');
-  const lista = [...cavalosCadastrados].sort((a,b) => a.cavalo.localeCompare(b.cavalo, 'pt-BR', {numeric:true}));
+  const lista = [...cavalosCadastrados].sort((a,b) => a.cavalo.localeCompare(b.cavalo, 'pt-BR'));
 
   if (!lista.length) {
     if (resumoEl) resumoEl.textContent = 'Nenhuma placa cadastrada';
@@ -2736,7 +2736,7 @@ function renderPatio() {
   const el = document.getElementById('patio-lista');
   const resumoEl = document.getElementById('patio-resumo');
   const patio = aplicarAjustesPatio(calcularPatio()).sort((a,b) =>
-    a.cavalo.localeCompare(b.cavalo, 'pt-BR', {numeric:true})
+    a.cavalo.localeCompare(b.cavalo, 'pt-BR')
   );
 
   if (!patio.length) {
@@ -2813,7 +2813,7 @@ function renderRua() {
   const el = document.getElementById('rua-lista');
   const resumoEl = document.getElementById('rua-resumo');
   const rua = aplicarAjustesRua(calcularRua()).sort((a,b) =>
-    a.cavalo.localeCompare(b.cavalo, 'pt-BR', {numeric:true})
+    a.cavalo.localeCompare(b.cavalo, 'pt-BR')
   );
 
   if (!rua.length) {
