@@ -666,15 +666,15 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
   <div style="background:#0D1F3C;border-radius:var(--radius-lg);width:100%;max-width:340px;padding:24px 20px;border:1px solid #1565C040">
     <div style="font-size:28px;text-align:center;margin-bottom:10px">🚛🚛</div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#fff;text-align:center;margin-bottom:8px;letter-spacing:.04em">Bitrem — informe as carretas</div>
-    <div style="font-size:12px;color:#90A4AE;text-align:center;margin-bottom:16px">Digite as placas das duas carretas</div>
+    <div style="font-size:12px;color:#90A4AE;text-align:center;margin-bottom:16px">Placas opcionais — preencha nenhuma, uma ou as duas</div>
     <div style="margin-bottom:10px">
-      <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Carreta 1</div>
+      <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Carreta 1 (opcional)</div>
       <input type="text" id="bitrem-c1" placeholder="Ex: 5D22" maxlength="4" inputmode="text" autocomplete="off"
         oninput="this.value=this.value.toUpperCase()"
         style="width:100%;padding:12px 14px;background:#102040;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:18px;color:#fff;outline:none;text-align:center;letter-spacing:.12em">
     </div>
     <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Carreta 2</div>
+      <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Carreta 2 (opcional)</div>
       <input type="text" id="bitrem-c2" placeholder="Ex: 5D23" maxlength="4" inputmode="text" autocomplete="off"
         oninput="this.value=this.value.toUpperCase()"
         style="width:100%;padding:12px 14px;background:#102040;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:18px;color:#fff;outline:none;text-align:center;letter-spacing:.12em">
@@ -2210,11 +2210,23 @@ function _cancelarBitrem() {
 function _confirmarBitrem() {
   const c1 = document.getElementById('bitrem-c1').value.trim().toUpperCase();
   const c2 = document.getElementById('bitrem-c2').value.trim().toUpperCase();
-  if (!c1 || c1.length !== 4) { toast('Informe a placa da Carreta 1 (4 dígitos)'); return; }
-  if (!c2 || c2.length !== 4) { toast('Informe a placa da Carreta 2 (4 dígitos)'); return; }
+
+  // Ambas as placas são opcionais — só valida o formato de quem foi preenchido
+  if (c1 && c1.length !== 4) { toast('Carreta 1: use 4 dígitos ou deixe em branco'); return; }
+  if (c2 && c2.length !== 4) { toast('Carreta 2: use 4 dígitos ou deixe em branco'); return; }
+
   document.activeElement && document.activeElement.blur();
   document.getElementById('bitrem-overlay').classList.remove('open');
-  vals.carreta = c1 + '/' + c2;
+
+  if (c1 && c2) {
+    vals.carreta = c1 + '/' + c2;       // as duas placas informadas
+  } else if (c1) {
+    vals.carreta = c1;                   // apenas a carreta 1
+  } else if (c2) {
+    vals.carreta = c2;                   // apenas a carreta 2
+  } else {
+    vals.carreta = 'BITREM';             // nenhuma placa informada
+  }
   setTimeout(() => abrirRevisao(), 50);
 }
 
