@@ -2867,6 +2867,7 @@ atualizarTurnoBar();
   document.addEventListener('focusin', function(e) {
     const el = e.target;
     if (!el || !['INPUT','TEXTAREA','SELECT'].includes(el.tagName)) return;
+    if (el.type === 'date') return; // campo de data fica embaixo, perto do botão Próximo
     const overlay = overlayDoCampo(el);
     if (!overlay) return;
     if (timeoutBlur) { clearTimeout(timeoutBlur); timeoutBlur = null; }
@@ -2876,6 +2877,7 @@ atualizarTurnoBar();
   document.addEventListener('focusout', function(e) {
     const el = e.target;
     if (!el || !['INPUT','TEXTAREA','SELECT'].includes(el.tagName)) return;
+    if (el.type === 'date') return; // campo de data não participa desse reposicionamento
     const overlay = overlayDoCampo(el);
     if (!overlay) return;
     // Pequeno atraso: se o foco for para outro campo do mesmo painel, não pisca
