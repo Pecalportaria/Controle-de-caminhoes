@@ -1392,6 +1392,9 @@ function renderStep() {
     }
   } else if (s.tipo==='date') {
     cont.innerHTML = '<input type="date" id="painel-inp" class="painel-input" value="'+(vals.data||hoje())+'">';
+    // Garante que o painel fique embaixo (perto do polegar), removendo qualquer
+    // reposicionamento para o topo que tenha ficado ativo do campo anterior.
+    document.getElementById('painel-overlay')?.classList.remove('teclado-aberto');
     setTimeout(()=>{ const el=document.getElementById('painel-inp'); if(el) el.focus(); },100);
   } else {
     let val = vals[s.key]||'';
