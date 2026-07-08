@@ -765,6 +765,7 @@ const totalSteps = 7;
 let regs = []; // dados carregados do Firestore
 let ajustesPatio = []; // ajustes manuais de inclusão/retirada do pátio
 let cavalosCadastrados = []; // banco de dados de placas de cavalo cadastradas
+let statusAtualPatio = []; // status atual (carregado/vazio) enquanto o caminhão está no pátio — NÃO altera o registro real de portaria
 let _fbIniciado = false;
 
 // Inicializar listener do Firestore quando Firebase estiver pronto
@@ -804,6 +805,16 @@ function iniciarFirebase() {
     if (document.getElementById('banco-overlay')?.classList.contains('open')) renderBancoCavalos();
   }, (err) => {
     console.error('Firestore erro (cavalosCadastrados):', err);
+  });
+
+  // Listener em tempo real para o status atual (carregado/vazio) dos caminhões no pátio
+  // (camada separada — nunca altera o registro real de entrada/saída)
+  const q4 = window._col('statusAtualPatio');
+  window._onSnapshot(q4, (snap) => {
+    statusAtualPatio = snap.docs.map(d => d.data());
+    if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
+  }, (err) => {
+    console.error('Firestore erro (statusAtualPatio):', err);
   });
 }
 
@@ -2747,10 +2758,63 @@ function abrirPatio() {
   document.getElementById('patio-overlay').classList.add('open');
 }
 
+// Altera o status atual (Carregado/Vazio) exibido no Pátio, SEM alterar o
+// registro original de entrada/saída da portaria (que é histórico e não deve
+// ser reescrito). Serve para casos como: descarregar no pátio, ou trocar a
+// carga para outra carreta parada — o log de entrada continua íntegro.
+function alterarStatusPatio(cavalo, situacaoAtual) {
+  const novoStatus = situacaoAtual === 'carregado' ? 'vazio' : 'carregado';
+  const t = getTurno();
+  if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
+  const porteiros = getPorteiros();
+  const p = porteiros.find(x => x.nome === t.nome);
+
+  pedirSenha(
+    'Alterar status',
+    'Digite a senha de ' + t.nome + ' para mudar ' + cavalo + ' para ' + (novoStatus === 'carregado' ? 'Carregado' : 'Vazio'),
+    async function(senha) {
+      if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+      try {
+        const key = cavalo.toUpperCase();
+        const registro = { cavalo: key, situacao: novoStatus, data: hoje(), hora: horaAgora(), porteiro: t.nome };
+        if (window._fbReady) {
+          await window._setDoc(window._doc('statusAtualPatio', key), registro);
+        } else {
+          statusAtualPatio = statusAtualPatio.filter(s => s.cavalo !== key);
+          statusAtualPatio.push(registro);
+        }
+        toast('Status de ' + cavalo + ' alterado para ' + (novoStatus === 'carregado' ? 'Carregado' : 'Vazio'));
+        renderPatio();
+      } catch(e) {
+        console.error('Erro ao alterar status no pátio:', e);
+        toast('Erro ao alterar status');
+      }
+    }
+  );
+}
+
+// Aplica o status atual (camada separada) por cima da lista do pátio, apenas
+// quando ele for mais recente do que o próprio item (entrada real ou ajuste
+// manual) — evita usar um status "velho" de uma visita anterior do mesmo cavalo.
+function aplicarStatusAtualPatio(lista) {
+  if (!statusAtualPatio.length) return lista;
+  return lista.map(r => {
+    const key = r.cavalo.toUpperCase();
+    const ov = statusAtualPatio.find(s => (s.cavalo || '').toUpperCase() === key);
+    if (!ov) return r;
+    const dtItem = (r.data || '') + (r.entrada || '');
+    const dtOverride = (ov.data || '') + (ov.hora || '');
+    if (dtOverride > dtItem) {
+      return { ...r, situacao: ov.situacao, _statusAlterado: true };
+    }
+    return r;
+  });
+}
+
 function renderPatio() {
   const el = document.getElementById('patio-lista');
   const resumoEl = document.getElementById('patio-resumo');
-  const patio = aplicarAjustesPatio(calcularPatio()).sort((a,b) =>
+  const patio = aplicarStatusAtualPatio(aplicarAjustesPatio(calcularPatio())).sort((a,b) =>
     a.cavalo.localeCompare(b.cavalo, 'pt-BR')
   );
 
@@ -2771,8 +2835,9 @@ function renderPatio() {
         <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.entrada}</div>
         <div style="font-size:12px;color:#90CAF9;margin-top:2px">${r.motorista||'—'}</div>
         ${r._ajusteManual ? `<div style="font-size:10px;color:#CE93D8;margin-top:2px">🔧 ${r.destino}</div>` : ''}
+        ${r._statusAlterado ? `<div style="font-size:10px;color:#FFB74D;margin-top:2px">↻ Status atualizado no pátio</div>` : ''}
       </div>
-      <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}">${r.situacao==='carregado'?'Carregado':'Vazio'}</span>
+      <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="cursor:pointer" onclick="alterarStatusPatio('${r.cavalo}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'Carregado':'Vazio'} ✏️</span>
     </div>
   `).join('');
 }
