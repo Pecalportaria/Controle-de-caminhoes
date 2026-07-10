@@ -43,8 +43,23 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, or
     window._db = db;
     window._col = (nome) => collection(db, nome);
     window._doc = (col, id) => doc(db, col, String(id));
-    window._setDoc = setDoc;
-    window._deleteDoc = deleteDoc;
+    // Trava de somente-leitura: bloqueia qualquer gravação/exclusão quando o
+    // dispositivo não é o porteiro logado, exceto o próprio doc de turno
+    // (config/turno), que é como um porteiro real consegue logar/deslogar.
+    window._setDoc = (ref, ...args) => {
+      if (window._isReadOnly && window._isReadOnly() && ref.path !== 'config/turno') {
+        if (window.toast) window.toast('Modo somente leitura — ação não permitida');
+        return Promise.resolve();
+      }
+      return setDoc(ref, ...args);
+    };
+    window._deleteDoc = (ref, ...args) => {
+      if (window._isReadOnly && window._isReadOnly() && ref.path !== 'config/turno') {
+        if (window.toast) window.toast('Modo somente leitura — ação não permitida');
+        return Promise.resolve();
+      }
+      return deleteDoc(ref, ...args);
+    };
     window._onSnapshot = onSnapshot;
     window._query = query;
     window._orderBy = orderBy;
@@ -209,6 +224,14 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 
 /* TOAST */
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:#0D1F3C;color:#fff;border:1px solid #1565C0;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:600;opacity:0;transition:all .22s;pointer-events:none;z-index:300;white-space:nowrap}
+.acesso-restrito-box{background:#0D1F3C;border:1px solid #1565C0;border-radius:16px;padding:28px 20px;margin:16px;text-align:center}
+.ar-icon{font-size:38px;margin-bottom:8px}
+.ar-titulo{font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;font-family:'Barlow Condensed',sans-serif}
+.ar-sub{font-size:13px;color:#90A4AE;margin-bottom:18px;line-height:1.4}
+.ar-input{width:100%;box-sizing:border-box;background:#0A1628;border:1px solid #1565C0;border-radius:12px;padding:13px;color:#fff;font-size:15px;text-align:center;margin-bottom:14px}
+.ar-input::placeholder{color:#5C7A9E}
+.ar-btn{width:100%;background:linear-gradient(135deg,#0D1F3C,#1565C0);color:#fff;border:none;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer}
+body.bloqueado #tab-lista,body.bloqueado #tab-historico{pointer-events:none;opacity:.4}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* LISTA */
@@ -332,6 +355,14 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
         <div class="placa-parafuso"></div>
       </div>
     </div>
+  </div>
+
+  <div class="acesso-restrito-box" id="acesso-restrito-box" style="display:none">
+    <div class="ar-icon">🔒</div>
+    <div class="ar-titulo">Área restrita</div>
+    <div class="ar-sub">Digite a senha para navegar pelo aplicativo (modo somente leitura, sem acesso a cadastros ou alterações).</div>
+    <input type="password" id="ar-senha" class="ar-input" placeholder="Senha" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarSenhaLeitura()">
+    <button class="ar-btn" onclick="confirmarSenhaLeitura()">Entrar</button>
   </div>
 </div>
 
@@ -968,19 +999,59 @@ function atualizarTurnoBar() {
   const t = getTurno();
   const info = document.getElementById('turno-info');
   const btn = document.getElementById('turno-btn');
-  if (!info || !btn) return;
-  if (t) {
-    info.textContent = '🟢 ' + t.nome;
-    info.style.color = '#81C784';
-    btn.textContent = 'LOGOUT';
-    btn.style.background = '#8B1A1A';
-  } else {
-    info.textContent = 'Nenhum porteiro logado';
-    info.style.color = '#90A4AE';
-    btn.textContent = 'LOGIN';
-    btn.style.background = '#1565C0';
+  if (info && btn) {
+    if (t) {
+      info.textContent = '🟢 ' + t.nome;
+      info.style.color = '#81C784';
+      btn.textContent = 'LOGOUT';
+      btn.style.background = '#8B1A1A';
+    } else {
+      info.textContent = 'Nenhum porteiro logado';
+      info.style.color = '#90A4AE';
+      btn.textContent = 'LOGIN';
+      btn.style.background = '#1565C0';
+    }
   }
+  aplicarGateAcesso();
 }
+
+// ── Acesso de visitante (somente leitura) ───────────────
+// Regras:
+//  - Porteiro logado NESTE dispositivo (euEstouLogado) = acesso total, sem restrição.
+//  - Sem login de porteiro: só libera navegação (leitura) com a senha "codepecal",
+//    guardada neste dispositivo/navegador. Sem ela, nada no app fica acessível.
+//  - Toda escrita no banco passa por isReadOnly() como trava final, então mesmo
+//    que algum botão de edição escape da checagem visual, a gravação é bloqueada.
+function isReadOnly() {
+  return !euEstouLogado();
+}
+window._isReadOnly = isReadOnly;
+
+function acessoLiberado() {
+  return euEstouLogado() || localStorage.getItem('acesso_leitura') === '1';
+}
+
+function confirmarSenhaLeitura() {
+  const campo = document.getElementById('ar-senha');
+  const senha = campo ? campo.value : '';
+  if (senha !== 'codepecal') {
+    toast('Senha incorreta!');
+    if (campo) campo.value = '';
+    return;
+  }
+  localStorage.setItem('acesso_leitura', '1');
+  toast('Acesso liberado — modo somente leitura');
+  aplicarGateAcesso();
+}
+
+function aplicarGateAcesso() {
+  const box = document.getElementById('acesso-restrito-box');
+  if (!box) return;
+  const liberado = acessoLiberado();
+  box.style.display = liberado ? 'none' : 'block';
+  document.body.classList.toggle('bloqueado', !liberado);
+}
+aplicarGateAcesso();
 
 // Botão da barra de turno: se logado, mostra opção de logout; se não, abre login
 function abrirLoginTurno() {
@@ -1852,6 +1923,10 @@ async function addReg() {
 }
 
 function showTab(t) {
+  if (t !== 'registrar' && !acessoLiberado()) {
+    toast('Área restrita — digite a senha ou faça login');
+    return;
+  }
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
