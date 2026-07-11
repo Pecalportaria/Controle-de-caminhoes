@@ -2986,6 +2986,7 @@ function renderRua() {
         <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">Saída</div>
         <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.saida}</div>
         <div style="font-size:12px;color:#90CAF9;margin-top:2px">${r.motorista||'—'}</div>
+        <div style="font-size:12px;color:#FFB74D;margin-top:2px">${r.destino||'—'}</div>
       </div>
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}">${r.situacao==='carregado'?'Carregado':'Vazio'}</span>
     </div>
