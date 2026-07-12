@@ -231,7 +231,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 .ar-input{width:100%;max-width:280px;box-sizing:border-box;background:#0A1628;border:1px solid #1565C0;border-radius:12px;padding:13px;color:#fff;font-size:15px;text-align:center;margin-bottom:14px}
 .ar-input::placeholder{color:#5C7A9E}
 .ar-btn{width:100%;max-width:280px;background:linear-gradient(135deg,#0D1F3C,#1565C0);color:#fff;border:none;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer}
-body.bloqueado #tab-lista,body.bloqueado #tab-historico{pointer-events:none;opacity:.4}
+body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-bar{pointer-events:none;opacity:.4}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* LISTA */
@@ -1046,6 +1046,10 @@ aplicarGateAcesso();
 
 // Botão da barra de turno: se logado, mostra opção de logout; se não, abre login
 function abrirLoginTurno() {
+  if (!acessoLiberado()) {
+    toast('Desbloqueie o acesso restrito antes de fazer login');
+    return;
+  }
   const t = getTurno();
   if (t) {
     document.getElementById('turno-ativo-nome').textContent = t.nome;
