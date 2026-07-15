@@ -2045,8 +2045,10 @@ function _confirmarDelComSenha() {
 
 function editReg(id) {
   if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
-  pedirSenha('Editar registro', 'Digite a senha para editar', function(senha) {
-    if (senha !== '4343') { toast('Senha incorreta!'); return; }
+  const t = getTurno();
+  const p = getPorteiros().find(x => x.nome === t.nome);
+  pedirSenha('Editar registro', 'Digite a senha de ' + t.nome + ' para editar', function(senha) {
+    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
     _editRegInterno(id);
   });
 }
@@ -2054,8 +2056,10 @@ function editReg(id) {
 // Duplo clique no motorista do histórico: exige turno + senha → abre edição na aba Registros
 function abrirEdicaoDoHistorico(id) {
   if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
-  pedirSenha('Editar registro', 'Digite a senha para editar', function(senha) {
-    if (senha !== '4343') { toast('Senha incorreta!'); return; }
+  const t = getTurno();
+  const p = getPorteiros().find(x => x.nome === t.nome);
+  pedirSenha('Editar registro', 'Digite a senha de ' + t.nome + ' para editar', function(senha) {
+    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
     showTab('lista');
     setTimeout(() => _editRegInterno(id), 100);
   });
