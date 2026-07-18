@@ -965,6 +965,7 @@ function carregarPorteiros() {
 
 // Turno em memória, sincronizado via Firestore em tempo real
 let _turnoAtual = null;
+let _turnoCarregado = false; // true assim que a 1ª resposta do Firestore chega (evita "flash" do acesso restrito)
 
 function getTurno() {
   return _turnoAtual;
@@ -989,6 +990,7 @@ function carregarTurno() {
     } else {
       _turnoAtual = null;
     }
+    _turnoCarregado = true;
     atualizarTurnoBar();
   });
 }
@@ -1063,7 +1065,13 @@ function toggleSenhaVisivel() {
 function aplicarGateAcesso() {
   const box = document.getElementById('acesso-restrito-box');
   if (!box) return;
-  const liberado = acessoLiberado();
+  // Enquanto a 1ª resposta do turno ainda não chegou do Firestore, usa o último
+  // estado conhecido deste dispositivo (meu_turno) para não "piscar" a tela de
+  // acesso restrito em quem já estava logado. Assim que o turno é confirmado
+  // pelo servidor, acessoLiberado() passa a valer de verdade.
+  const meuNome = localStorage.getItem('meu_turno');
+  const aguardandoConfirmacao = !_turnoCarregado && !!meuNome;
+  const liberado = acessoLiberado() || aguardandoConfirmacao;
   box.style.display = liberado ? 'none' : 'flex';
   document.body.classList.toggle('bloqueado', !liberado);
 }
