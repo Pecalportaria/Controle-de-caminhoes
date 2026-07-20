@@ -2935,8 +2935,8 @@ function renderPatio() {
   if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' no pátio';
 
   el.innerHTML = patio.map(r => `
-    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#8E24AA' : '#1565C030'};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em">${r.cavalo}</div>
+    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#8E24AA' : '#1565C030'};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:92px 1fr auto;gap:8px;align-items:center">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em;font-variant-numeric:tabular-nums">${r.cavalo}</div>
       <div>
         <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">${r._ajusteManual ? 'Ajuste manual' : 'Entrada'}</div>
         <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.entrada}</div>
@@ -3013,8 +3013,8 @@ function renderRua() {
   if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' na rua';
 
   el.innerHTML = rua.map(r => `
-    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em">${r.cavalo}</div>
+    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:92px 1fr auto;gap:8px;align-items:center">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em;font-variant-numeric:tabular-nums">${r.cavalo}</div>
       <div>
         <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">Saída</div>
         <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.saida}</div>
