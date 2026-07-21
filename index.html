@@ -460,6 +460,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
           <div class="hora-col" onclick="document.getElementById('e-entrada').focus()" style="cursor:text"><span class="hora-label">Entrada</span><input type="text" id="e-entrada" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
           <div class="hora-col" onclick="document.getElementById('e-saida').focus()" style="cursor:text"><span class="hora-label">Saída</span><input type="text" id="e-saida" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
         </div>
+        <div id="e-standby-aviso" style="display:none;align-items:center;gap:6px;font-size:12px;color:#FFB74D;margin-top:8px">🕓 Stand by — deixe a hora de saída em branco para manter pendente</div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="e-sit-car" onclick="setEditSit('carregado')">Carregado</button><button class="sit-btn" id="e-sit-vaz" onclick="setEditSit('vazio')">Vazio</button></div></div>
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text;border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="e-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent;position:relative;z-index:2"></div></div>
@@ -486,6 +487,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
           <div class="hora-col"><span class="hora-label">Entrada</span><input type="text" id="r-entrada" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
           <div class="hora-col"><span class="hora-label">Saída</span><input type="text" id="r-saida" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
         </div>
+        <div id="r-standby-aviso" style="display:none;align-items:center;gap:6px;font-size:12px;color:#FFB74D;margin-top:8px">🕓 Stand by — hora de saída será preenchida depois</div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="r-sit-car" onclick="setRevisaoSit('carregado')">Carregado</button><button class="sit-btn" id="r-sit-vaz" onclick="setRevisaoSit('vazio')">Vazio</button></div></div>
       <div class="form-row" style="border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="r-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
@@ -864,7 +866,7 @@ if (window._fbError) {
 }
 
 // Armazena valores entre steps
-const vals = {cavalo:'',carreta:'',motorista:'',data:'',entrada:'',saida:'',destino:''};
+const vals = {cavalo:'',carreta:'',motorista:'',data:'',entrada:'',saida:'',destino:'',standBy:false};
 
 function hoje() {
   const d = new Date();
@@ -1445,6 +1447,7 @@ function fecharPainel() {
   // Limpar todos os campos para o próximo registro
   Object.keys(vals).forEach(k => vals[k] = '');
   vals.data = hoje();
+  vals.standBy = false;
   sit = 'carregado';
   stepAtual = 1;
   window._sugestoes = {};
@@ -1474,9 +1477,9 @@ function renderStep() {
   } else if (s.tipo==='hora2') {
     const ha = horaAgora();
     const selEnt = vals.entrada ? 'sel-ent' : '';
-    const selSai = vals.saida   ? 'sel-sai' : '';
+    const selSai = (vals.saida && !vals.standBy) ? 'sel-sai' : '';
     const valEnt = vals.entrada || ha;
-    const valSai = vals.saida   || ha;
+    const valSai = vals.standBy ? 'STAND BY' : (vals.saida || ha);
     cont.innerHTML =
       '<div class="hora-btns">'+
         '<div class="hora-btn '+selEnt+'" id="btn-hora-ent" onclick="selecionarHora(&quot;entrada&quot;)" ondblclick="editarHora(&quot;entrada&quot;)">'+
@@ -1485,11 +1488,11 @@ function renderStep() {
         '</div>'+
         '<div class="hora-btn '+selSai+'" id="btn-hora-sai" onclick="selecionarHora(&quot;saida&quot;)" ondblclick="editarHora(&quot;saida&quot;)">'+
           '<div class="hora-btn-label">Saída</div>'+
-          '<div class="hora-btn-val" id="val-saida">'+valSai+'</div>'+
+          '<div class="hora-btn-val" id="val-saida" style="'+(vals.standBy?'color:#FFB74D':'')+'">'+valSai+'</div>'+
         '</div>'+
       '</div>'+
       '<div class="hora-edit-wrap" id="hora-edit-wrap" style="display:none"></div>'+
-      '<div style="font-size:11px;color:#546E7A;text-align:center;margin-top:4px">Toque para selecionar • Toque duplo para editar hora</div>';
+      '<div style="font-size:11px;color:#546E7A;text-align:center;margin-top:4px">Toque para selecionar • Toque duplo para editar hora • Enter em branco = Stand By</div>';
     // Pré-selecionar com base no inverso do último registro, ou entrada por padrão
     const presel = window._sugestaoHora || 'entrada';
     window._sugestaoHora = null;
@@ -1578,6 +1581,7 @@ function renderStep() {
 // Selecionar hora: um toque — seleciona uma, apaga a outra
 function selecionarHora(tipo) {
   const ha = horaAgora();
+  vals.standBy = false;
   if (tipo === 'entrada') {
     vals.entrada = document.getElementById('val-entrada')?.textContent || ha;
     vals.saida = '';
@@ -1585,10 +1589,12 @@ function selecionarHora(tipo) {
     document.getElementById('btn-hora-sai')?.classList.remove('sel-sai');
   } else {
     vals.saida = document.getElementById('val-saida')?.textContent || ha;
+    if (vals.saida === 'STAND BY') vals.saida = ha;
     vals.entrada = '';
     document.getElementById('btn-hora-sai')?.classList.add('sel-sai');
     document.getElementById('btn-hora-ent')?.classList.remove('sel-ent');
   }
+  renderStep();
 }
 
 // Editar hora: toque duplo — abre input para digitar hora diferente
@@ -1601,9 +1607,10 @@ function editarHora(tipo) {
   const inp = document.getElementById('hora-edit-inp');
   maskHora(inp);
 
-  function salvarValor() {
+  function salvarValor(viaEnter) {
     const v = inp.value.trim();
     if (v) {
+      vals.standBy = false;
       if (tipo === 'entrada') {
         vals.entrada = v;
         vals.saida = '';
@@ -1613,8 +1620,16 @@ function editarHora(tipo) {
         vals.saida = v;
         vals.entrada = '';
         const el = document.getElementById('val-saida');
-        if (el) el.textContent = v;
+        if (el) { el.textContent = v; el.style.color = ''; }
       }
+    } else if (viaEnter && tipo === 'saida') {
+      // Enter em branco na saída = Stand By (dados preenchidos antecipadamente,
+      // hora exata definida depois)
+      vals.standBy = true;
+      vals.saida = '';
+      vals.entrada = '';
+      const el = document.getElementById('val-saida');
+      if (el) { el.textContent = 'STAND BY'; el.style.color = '#FFB74D'; }
     }
     wrap.style.display = 'none';
   }
@@ -1622,7 +1637,7 @@ function editarHora(tipo) {
   inp.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      salvarValor();
+      salvarValor(true);
       avancarStep();
     }
   });
@@ -1646,7 +1661,7 @@ function abrirRevisao() {
   document.getElementById('r-motorista').value = vals.motorista || '';
   document.getElementById('r-data').value      = vals.data      || hoje();
   document.getElementById('r-entrada').value   = vals.entrada   || '';
-  document.getElementById('r-saida').value     = vals.saida     || '';
+  document.getElementById('r-saida').value     = vals.standBy ? '' : (vals.saida || '');
   document.getElementById('r-destino').value   = vals.destino   || '';
   setRevisaoSit(sit);
   // Máscara nas horas
@@ -1656,8 +1671,13 @@ function abrirRevisao() {
     el.parentNode.replaceChild(clone, el);
     maskHora(document.getElementById(id));
   });
-  // Fechar painel e abrir revisão
-  fecharPainel();
+  // Stand By é definido lá no passo de hora (Enter em branco na saída);
+  // aqui só refletimos o estado, sem checkbox.
+  document.getElementById('r-standby-aviso').style.display = vals.standBy ? 'flex' : 'none';
+  document.getElementById('r-saida').disabled = !!vals.standBy;
+  // Fechar painel (apenas visualmente — NÃO resetar vals aqui, senão perdemos
+  // o estado de Stand By antes do usuário confirmar na tela de revisão)
+  document.getElementById('painel-overlay').classList.remove('open');
   document.getElementById('revisao-overlay').classList.add('open');
 }
 
@@ -1672,14 +1692,14 @@ function confirmarSalvar() {
   vals.motorista = document.getElementById('r-motorista').value.trim();
   vals.data      = document.getElementById('r-data').value.trim();
   vals.entrada   = document.getElementById('r-entrada').value.trim();
-  vals.saida     = document.getElementById('r-saida').value.trim();
+  vals.saida     = vals.standBy ? '' : document.getElementById('r-saida').value.trim();
   vals.destino   = document.getElementById('r-destino').value.trim();
   sit = revisaoSit;
   // Validar campos obrigatórios
   if (!vals.cavalo || vals.cavalo.length !== 4) { toast('Placa do cavalo: 4 caracteres'); return; }
   if (!vals.motorista) { toast('Informe o motorista'); return; }
   if (!vals.data) { toast('Informe a data'); return; }
-  if (!vals.entrada && !vals.saida) { toast('Informe entrada ou saída'); return; }
+  if (!vals.entrada && !vals.saida && !vals.standBy) { toast('Informe entrada, saída ou stand by'); return; }
   if (!vals.destino) { toast('Informe o destino'); return; }
 
   // Verificar inconsistências com base no histórico
@@ -1820,7 +1840,7 @@ function voltarStep() {
   if (stepAtual <= 1) return;
   stepAtual--;
   // Ao voltar para o step de hora, limpar ambos para nova escolha
-  if (stepAtual === 1) { vals.entrada = ''; vals.saida = ''; }
+  if (stepAtual === 1) { vals.entrada = ''; vals.saida = ''; vals.standBy = false; }
   renderStep();
 }
 
@@ -1839,7 +1859,7 @@ function avancarStep() {
   }
 
   // Validar — ordem: 1=hora, 2=data, 3=cavalo, 4=motorista, 5=destino, 6=carreta, 7=sit
-  if (stepAtual===1 && !vals.entrada && !vals.saida) { toast('Selecione entrada ou saída'); return; }
+  if (stepAtual===1 && !vals.entrada && !vals.saida && !vals.standBy) { toast('Selecione entrada, saída ou stand by'); return; }
   if (stepAtual===2 && !vals.data) { toast('Informe a data'); return; }
   if (stepAtual===3 && (!vals.cavalo||vals.cavalo.length!==4)) { toast('Placa do cavalo: 4 caracteres'); return; }
   if (stepAtual===3) { window._sugestoes = {}; aplicarSugestoes(vals.cavalo); sugerirInverso(vals.cavalo); }
@@ -1918,6 +1938,7 @@ function setEditSit(s) {
 function resetForm() {
   Object.keys(vals).forEach(k => vals[k]='');
   vals.data = hoje();
+  vals.standBy = false;
   sit = 'carregado';
   stepAtual = 1;
   window._sugestoes = {};
@@ -1932,7 +1953,8 @@ async function addReg() {
     cavalo: vals.cavalo, carreta: vals.carreta || 'CAVALO',
     motorista: vals.motorista, data: vals.data,
     entrada: vals.entrada, saida: vals.saida,
-    situacao: sit, destino: vals.destino
+    situacao: sit, destino: vals.destino,
+    standBy: !!vals.standBy
   };
   regs.unshift(reg);
   salvar();
@@ -2096,6 +2118,9 @@ function _editRegInterno(id) {
   maskHora(eEnt); maskHora(eSai);
   eEnt.addEventListener('input', function(){ if(this.value) eSai.value=''; });
   eSai.addEventListener('input', function(){ if(this.value) eEnt.value=''; });
+  // Stand By: derivado diretamente do registro (sem entrada nem saída definidas)
+  const standbyAviso = document.getElementById('e-standby-aviso');
+  standbyAviso.style.display = r.entrada ? 'none' : 'flex';
   document.getElementById('modal-overlay').classList.add('open');
 }
 
@@ -2112,15 +2137,15 @@ async function salvarEdicao() {
   const ent=document.getElementById('e-entrada').value.trim();
   const sai=document.getElementById('e-saida').value.trim();
   const dst=document.getElementById('e-destino').value.trim();
+  const standBy = !ent && !sai; // sem entrada nem saída definidas = Stand By (pendente)
   if (!cav||cav.length!==4) { toast('Placa do cavalo: 4 caracteres'); return; }
   if (!validarCarreta(car))  { toast('Carreta: placa 4 dígitos ou Bitrem/Truck/Cavalo'); return; }
   if (!mot)                  { toast('Informe o motorista'); return; }
   if (!dat)                  { toast('Informe a data'); return; }
-  if (!ent&&!sai)            { toast('Informe entrada ou saída'); return; }
   if (!dst)                  { toast('Informe o destino'); return; }
   const idx = regs.findIndex(x => x.id === editId);
   if (idx===-1) return;
-  regs[idx] = {...regs[idx], cavalo:cav, carreta:car, motorista:mot, data:dat, entrada:ent, saida:sai, situacao:editSit, destino:dst};
+  regs[idx] = {...regs[idx], cavalo:cav, carreta:car, motorista:mot, data:dat, entrada:ent, saida:sai, situacao:editSit, destino:dst, standBy};
   const regAtualizado = regs[idx];
   salvar(); fecharModal(); renderLista(); toast('Atualizado!');
   await salvarReg(regAtualizado);
@@ -2158,9 +2183,10 @@ function renderLista() {
   el.innerHTML = list.map(r => {
     // Determinar movimento (entrada ou saída)
     const temEntrada = r.entrada ? true : false;
-    const horarioMovimento = r.entrada || r.saida || '—';
-    const corBorderMovimento = temEntrada ? '#43A047' : '#E53935';
-    const corFundoMovimento = temEntrada ? '#2E7D32' : '#C62828';
+    const horarioMovimento = r.standBy ? 'STAND BY' : (r.entrada || r.saida || '—');
+    const corBorderMovimento = r.standBy ? '#E65100' : (temEntrada ? '#43A047' : '#E53935');
+    const corFundoMovimento = r.standBy ? '#E65100' : (temEntrada ? '#2E7D32' : '#C62828');
+    const labelMovimento = r.standBy ? '🕓 Stand By' : (temEntrada ? 'Entrada' : 'Saída');
     
     // Determinar situação (carregado ou vazio)
     const situacao = r.situacao === 'carregado' ? 'Carregado' : 'Vazio';
@@ -2189,11 +2215,11 @@ function renderLista() {
         <!-- Linha 3: Entrada/Saída | Carregado/Vazio -->
         <div class="reg-cell" style="min-height:32px;padding:4px 8px">
           <div class="reg-cell-label" style="font-size:14px">HORA</div>
-          <div class="reg-cell-val" style="font-size:20px;color:#fff">${horarioMovimento}</div>
+          <div class="reg-cell-val" style="font-size:${r.standBy?'14px':'20px'};color:#fff">${horarioMovimento}</div>
         </div>
         <div class="reg-cell" style="min-height:32px;padding:4px 8px;gap:4px">
           <div style="background:${corFundoMovimento};border:2px solid ${corBorderMovimento};border-radius:50px;padding:3px 14px;display:flex;align-items:center;justify-content:center">
-            <div class="reg-cell-val" style="color:#fff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.1em">${temEntrada ? 'Entrada' : 'Saída'}</div>
+            <div class="reg-cell-val" style="color:#fff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.1em">${labelMovimento}</div>
           </div>
           <div style="background:${corFundoSituacao};border:2px solid ${corBorderSituacao};border-radius:50px;padding:3px 14px;display:flex;align-items:center;justify-content:center">
             <div class="reg-cell-val" style="font-size:12px;color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:.1em">${situacao}</div>
@@ -2205,7 +2231,10 @@ function renderLista() {
           <div class="reg-cell-val" style="font-size:20px;color:#FFFFFF">${r.destino||'—'}</div>
         </div>
 
-        <!-- Linha 5: Editar | Remover -->
+        <!-- Linha 5: Confirmar saída (só quando Stand By) -->
+        ${r.standBy ? `<div class="reg-cell" style="grid-column:1/-1;min-height:30px;padding:2px 8px"><button class="btn-edit" style="width:100%;background:#E65100;border-color:#E65100;color:#fff;font-weight:700" onclick="confirmarSaidaStandBy(${r.id})">🕓 ✓ Confirmar saída agora</button></div>` : ''}
+
+        <!-- Linha 6: Editar | Remover -->
         <div class="reg-cell" style="min-height:30px;padding:2px 8px"><button class="btn-edit" onclick="editReg(${r.id})">Editar</button></div>
         <div class="reg-cell" style="min-height:30px;padding:2px 8px"><button class="btn-del" onclick="delReg(${r.id})">Remover</button></div>
 
@@ -2455,6 +2484,7 @@ function calcularPatio() {
   const porCavalo = {};
   regs.forEach(r => {
     if (!r.cavalo) return;
+    if (r.standBy) return; // Stand By ainda não é um movimento confirmado — não conta como "último evento"
     const key = r.cavalo.toUpperCase();
     const dt = r.data + (r.entrada || r.saida || '');
     if (!porCavalo[key] || dt > porCavalo[key].dt) {
@@ -2955,6 +2985,7 @@ function calcularRua() {
   const porCavalo = {};
   regs.forEach(r => {
     if (!r.cavalo) return;
+    if (r.standBy) return; // Stand By ainda não é um movimento confirmado — não conta como "último evento"
     const key = r.cavalo.toUpperCase();
     const dt = r.data + (r.entrada || r.saida || '');
     if (!porCavalo[key] || dt > porCavalo[key].dt) {
@@ -3024,6 +3055,20 @@ function renderRua() {
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:20px;padding:4px 14px" title="${r.situacao==='carregado'?'Carregado':'Vazio'}">${r.situacao==='carregado'?'C':'V'}</span>
     </div>
   `).join('');
+}
+
+// Confirma a saída de um caminhão em Stand By com o horário atual
+async function confirmarSaidaStandBy(id) {
+  if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
+  const idx = regs.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  regs[idx] = { ...regs[idx], saida: horaAgora(), standBy: false };
+  const regAtualizado = regs[idx];
+  salvar();
+  renderLista();
+  renderRua();
+  toast('Saída confirmada — ' + regAtualizado.saida + ' ✓');
+  await salvarReg(regAtualizado);
 }
 
 renderLista();
