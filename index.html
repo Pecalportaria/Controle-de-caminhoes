@@ -458,9 +458,8 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
         <div class="form-label">Horário</div>
         <div class="hora-wrap">
           <div class="hora-col" onclick="document.getElementById('e-entrada').focus()" style="cursor:text"><span class="hora-label">Entrada</span><input type="text" id="e-entrada" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
-          <div class="hora-col" onclick="document.getElementById('e-saida').focus()" style="cursor:text"><span class="hora-label">Saída</span><input type="text" id="e-saida" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
+          <div class="hora-col" style="position:relative"><span class="hora-label" onclick="document.getElementById('e-saida').focus()" style="cursor:text">Saída</span><input type="text" id="e-saida" placeholder="00:00" maxlength="5" inputmode="numeric" onclick="this.focus()"><span id="e-standby-aviso" style="display:none;position:absolute;right:10px;bottom:9px;font-size:16px;pointer-events:none">🕓</span></div>
         </div>
-        <div id="e-standby-aviso" style="display:none;align-items:center;gap:6px;font-size:12px;color:#FFB74D;margin-top:8px">🕓 Stand by — deixe a hora de saída em branco para manter pendente</div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="e-sit-car" onclick="setEditSit('carregado')">Carregado</button><button class="sit-btn" id="e-sit-vaz" onclick="setEditSit('vazio')">Vazio</button></div></div>
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text;border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="e-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent;position:relative;z-index:2"></div></div>
@@ -485,9 +484,8 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
         <div class="form-label">Horário</div>
         <div class="hora-wrap">
           <div class="hora-col"><span class="hora-label">Entrada</span><input type="text" id="r-entrada" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
-          <div class="hora-col"><span class="hora-label">Saída</span><input type="text" id="r-saida" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
+          <div class="hora-col" style="position:relative"><span class="hora-label">Saída</span><input type="text" id="r-saida" placeholder="00:00" maxlength="5" inputmode="numeric"><span id="r-standby-aviso" style="display:none;position:absolute;right:10px;bottom:9px;font-size:16px;pointer-events:none">🕓</span></div>
         </div>
-        <div id="r-standby-aviso" style="display:none;align-items:center;gap:6px;font-size:12px;color:#FFB74D;margin-top:8px">🕓 Stand by — hora de saída será preenchida depois</div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="r-sit-car" onclick="setRevisaoSit('carregado')">Carregado</button><button class="sit-btn" id="r-sit-vaz" onclick="setRevisaoSit('vazio')">Vazio</button></div></div>
       <div class="form-row" style="border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="r-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
@@ -1673,7 +1671,7 @@ function abrirRevisao() {
   });
   // Stand By é definido lá no passo de hora (Enter em branco na saída);
   // aqui só refletimos o estado, sem checkbox.
-  document.getElementById('r-standby-aviso').style.display = vals.standBy ? 'flex' : 'none';
+  document.getElementById('r-standby-aviso').style.display = vals.standBy ? 'inline-block' : 'none';
   document.getElementById('r-saida').disabled = !!vals.standBy;
   // Fechar painel (apenas visualmente — NÃO resetar vals aqui, senão perdemos
   // o estado de Stand By antes do usuário confirmar na tela de revisão)
@@ -2120,7 +2118,7 @@ function _editRegInterno(id) {
   eSai.addEventListener('input', function(){ if(this.value) eEnt.value=''; });
   // Stand By: derivado diretamente do registro (sem entrada nem saída definidas)
   const standbyAviso = document.getElementById('e-standby-aviso');
-  standbyAviso.style.display = r.entrada ? 'none' : 'flex';
+  standbyAviso.style.display = r.standBy ? 'inline-block' : 'none';
   document.getElementById('modal-overlay').classList.add('open');
 }
 
