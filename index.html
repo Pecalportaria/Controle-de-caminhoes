@@ -1414,26 +1414,28 @@ function sugerirInverso(cavalo) {
 
 // Busca a carreta da última SAÍDA registrada deste cavalo, não importando a
 // data (usado para sugerir a mesma carreta quando o caminhão está entrando)
-function buscarUltimaCarretaSaida(cavalo) {
-  const ultimaSaida = regs
-    .filter(r => r.cavalo === cavalo && r.saida && r.carreta)
+// Busca o registro da última SAÍDA deste cavalo, não importando a data
+// (usado para sugerir a mesma carreta/motorista quando o caminhão está entrando)
+function buscarUltimaSaida(cavalo) {
+  return regs
+    .filter(r => r.cavalo === cavalo && r.saida)
     .sort((a,b) => {
       const da = a.data + a.saida;
       const db = b.data + b.saida;
       return da > db ? -1 : 1;
-    })[0];
-  return ultimaSaida ? ultimaSaida.carreta : null;
+    })[0] || null;
 }
 
 function aplicarSugestoes(cavalo) {
   window._sugestoes = {};
   const ehEntrada = !!vals.entrada;
-  // Ao entrar, priorizar a carreta da última saída deste cavalo (qualquer data)
-  const carretaUltimaSaida = ehEntrada ? buscarUltimaCarretaSaida(cavalo) : null;
+  // Ao entrar, priorizar a carreta e o motorista da última saída deste cavalo (qualquer data)
+  const ultimaSaida = ehEntrada ? buscarUltimaSaida(cavalo) : null;
   const sug = buscarSugestoes(cavalo);
-  const carretaSugerida = carretaUltimaSaida || (sug && sug.carreta);
-  if (carretaSugerida)          { vals.carreta   = carretaSugerida;    window._sugestoes.carreta   = carretaSugerida; }
-  if (sug && sug.motorista)     { vals.motorista = sug.motorista; window._sugestoes.motorista = sug.motorista; }
+  const carretaSugerida   = (ultimaSaida && ultimaSaida.carreta)   || (sug && sug.carreta);
+  const motoristaSugerido = (ultimaSaida && ultimaSaida.motorista) || (sug && sug.motorista);
+  if (carretaSugerida)   { vals.carreta   = carretaSugerida;   window._sugestoes.carreta   = carretaSugerida;   }
+  if (motoristaSugerido) { vals.motorista = motoristaSugerido; window._sugestoes.motorista = motoristaSugerido; }
 }
 
 function abrirPainel() {
