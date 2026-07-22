@@ -1506,7 +1506,7 @@ function renderStep() {
         '</div>'+
       '</div>'+
       '<div class="hora-edit-wrap" id="hora-edit-wrap" style="display:none"></div>'+
-      '<div style="font-size:11px;color:#546E7A;text-align:center;margin-top:4px">Toque para selecionar • Toque duplo para editar hora • Enter em branco = Stand By</div>';
+      '<div style="font-size:11px;color:#546E7A;text-align:center;margin-top:4px">Toque para selecionar • Toque duplo para editar hora • Próximo sem tocar = Stand By</div>';
     // Pré-selecionar com base no inverso do último registro, ou entrada por padrão
     const presel = window._sugestaoHora || 'entrada';
     window._sugestaoHora = null;
@@ -1621,7 +1621,7 @@ function editarHora(tipo) {
   const inp = document.getElementById('hora-edit-inp');
   maskHora(inp);
 
-  function salvarValor(viaEnter) {
+  function salvarValor() {
     const v = inp.value.trim();
     if (v) {
       vals.standBy = false;
@@ -1636,14 +1636,6 @@ function editarHora(tipo) {
         const el = document.getElementById('val-saida');
         if (el) { el.textContent = v; el.style.color = ''; }
       }
-    } else if (viaEnter && tipo === 'saida') {
-      // Enter em branco na saída = Stand By (dados preenchidos antecipadamente,
-      // hora exata definida depois)
-      vals.standBy = true;
-      vals.saida = '';
-      vals.entrada = '';
-      const el = document.getElementById('val-saida');
-      if (el) { el.textContent = 'STAND BY'; el.style.color = '#FFB74D'; }
     }
     wrap.style.display = 'none';
   }
@@ -1651,7 +1643,7 @@ function editarHora(tipo) {
   inp.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      salvarValor(true);
+      salvarValor();
       avancarStep();
     }
   });
@@ -1873,7 +1865,13 @@ function avancarStep() {
   }
 
   // Validar — ordem: 1=hora, 2=data, 3=cavalo, 4=motorista, 5=destino, 6=carreta, 7=sit
-  if (stepAtual===1 && !vals.entrada && !vals.saida && !vals.standBy) { toast('Selecione entrada, saída ou stand by'); return; }
+  if (stepAtual===1 && !vals.entrada && !vals.saida && !vals.standBy) {
+    // Nenhuma hora selecionada: entende como Stand By (saída sem hora definida ainda)
+    vals.standBy = true;
+    vals.saida = '';
+    vals.entrada = '';
+    toast('Stand by ativado — hora de saída definida depois 🕓');
+  }
   if (stepAtual===2 && !vals.data) { toast('Informe a data'); return; }
   if (stepAtual===3 && (!vals.cavalo||vals.cavalo.length!==4)) { toast('Placa do cavalo: 4 caracteres'); return; }
   if (stepAtual===3) { window._sugestoes = {}; aplicarSugestoes(vals.cavalo); sugerirInverso(vals.cavalo); }
