@@ -2922,16 +2922,15 @@ function renderPatio() {
   if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' no pátio';
 
   el.innerHTML = patio.map(r => `
-    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#8E24AA' : '#1565C030'};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:78px 1fr auto;gap:6px;align-items:center">
+    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#FDD835' : '#1565C030'};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:78px 1fr;gap:6px;align-items:center">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em;font-variant-numeric:tabular-nums">${r.cavalo}</div>
       <div>
-        <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">${r._ajusteManual ? 'Ajuste manual' : 'Entrada'}</div>
-        <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.entrada}</div>
+        <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="cursor:pointer;font-size:11px;padding:2px 10px" onclick="alterarStatusPatio('${r.cavalo}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
+        <div style="font-size:14px;font-weight:700;color:#fff;margin-top:3px">${fmtD(r.data)} às ${r.entrada}</div>
         <div style="font-size:12px;color:#90CAF9;margin-top:2px">${r.motorista||'—'}</div>
         ${r._ajusteManual && !/novo cadastro no banco de dados|cavalo sem uso/i.test(r.destino || '') ? `<div style="font-size:10px;color:#CE93D8;margin-top:2px">🔧 ${r.destino}</div>` : ''}
         ${r._statusAlterado ? `<div style="font-size:10px;color:#FFB74D;margin-top:2px">↻ Status atualizado no pátio</div>` : ''}
       </div>
-      <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="cursor:pointer;font-size:20px;padding:4px 14px" onclick="alterarStatusPatio('${r.cavalo}', '${r.situacao}')" title="${r.situacao==='carregado'?'Carregado':'Vazio'} — toque para trocar">${r.situacao==='carregado'?'C':'V'}</span>
     </div>
   `).join('');
 }
@@ -3001,15 +3000,14 @@ function renderRua() {
   if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' na rua';
 
   el.innerHTML = rua.map(r => `
-    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:78px 1fr auto;gap:6px;align-items:center">
+    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:78px 1fr;gap:6px;align-items:center">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:#FFD600;letter-spacing:.12em;font-variant-numeric:tabular-nums">${r.cavalo}</div>
       <div>
-        <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em">Saída</div>
-        <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.saida}</div>
+        <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:11px;padding:2px 10px">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
+        <div style="font-size:14px;font-weight:700;color:#fff;margin-top:3px">${fmtD(r.data)} às ${r.saida}</div>
         <div style="font-size:12px;color:#90CAF9;margin-top:2px">${r.motorista||'—'}</div>
         <div style="font-size:12px;color:#FFB74D;margin-top:2px">${r.destino||'—'}</div>
       </div>
-      <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:20px;padding:4px 14px" title="${r.situacao==='carregado'?'Carregado':'Vazio'}">${r.situacao==='carregado'?'C':'V'}</span>
     </div>
   `).join('');
 }
