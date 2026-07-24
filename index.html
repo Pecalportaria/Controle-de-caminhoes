@@ -1979,28 +1979,35 @@ function abrirHistoricoMotorista(motorista) {
   setTimeout(() => {
     document.getElementById('hist-motorista').value = motorista;
     document.getElementById('hist-cavalo').value = '';
+    document.getElementById('hist-carreta').value = '';
+    const selMes = document.getElementById('hist-mes');
+    if (selMes) selMes.value = '';
     renderHistorico();
   }, 50);
 }
 
-// Abrir histórico filtrado por cavalo (duplo clique na célula 3)
+// Abrir histórico filtrado por cavalo (clique na célula do cavalo) — mostra o ano todo
 function abrirHistoricoCavalo(cavalo) {
   showTab('historico');
   setTimeout(() => {
     document.getElementById('hist-cavalo').value = cavalo;
     document.getElementById('hist-motorista').value = '';
     document.getElementById('hist-carreta').value = '';
+    const selMes = document.getElementById('hist-mes');
+    if (selMes) selMes.value = '';
     renderHistorico();
   }, 50);
 }
 
-// Abrir histórico filtrado por carreta (duplo clique na célula da carreta)
+// Abrir histórico filtrado por carreta (clique na célula da carreta) — mostra o ano todo
 function abrirHistoricoCarreta(carreta) {
   showTab('historico');
   setTimeout(() => {
     document.getElementById('hist-carreta').value = carreta;
     document.getElementById('hist-cavalo').value = '';
     document.getElementById('hist-motorista').value = '';
+    const selMes = document.getElementById('hist-mes');
+    if (selMes) selMes.value = '';
     renderHistorico();
   }, 50);
 }
@@ -2155,17 +2162,17 @@ function renderLista() {
       <div class="reg-grid">
 
         <!-- Linha 1: Cavalo | Carreta -->
-        <div class="reg-cell" ondblclick="abrirHistoricoCavalo('${r.cavalo}')" style="min-height:40px">
+        <div class="reg-cell" style="min-height:40px;cursor:pointer" onclick="abrirHistoricoCavalo('${r.cavalo}')">
           <div class="reg-cell-label">Cavalo</div>
           <div class="reg-cell-val" style="font-size:20px">${r.cavalo}</div>
         </div>
-        <div class="reg-cell" ondblclick="abrirHistoricoCarreta('${(r.carreta||'').replace(/'/g,"\\'")}')" style="min-height:40px">
+        <div class="reg-cell" style="min-height:40px;cursor:pointer" onclick="abrirHistoricoCarreta('${(r.carreta||'').replace(/'/g,"\\'")}')">
           <div class="reg-cell-label">Carreta</div>
           <div class="reg-cell-val" style="font-size:20px">${r.carreta||'—'}</div>
         </div>
 
         <!-- Linha 2: Motorista (mesclado) -->
-        <div class="reg-cell" style="grid-column:1/-1;cursor:pointer;min-height:40px" ondblclick="abrirHistoricoMotorista('${r.motorista.replace(/'/g,"\\'")}')">
+        <div class="reg-cell" style="grid-column:1/-1;cursor:pointer;min-height:40px" onclick="abrirHistoricoMotorista('${r.motorista.replace(/'/g,"\\'")}')">
           <div class="reg-cell-val" style="font-size:20px">${r.motorista}</div>
         </div>
 
@@ -3062,6 +3069,106 @@ atualizarTurnoBar();
       const aindaDentro = focoAtual && overlayDoCampo(focoAtual) === overlay;
       if (!aindaDentro) overlay.classList.remove('teclado-aberto');
     }, 150);
+  });
+})();
+</script>
+<script>
+// ── Navegação: botão "voltar" do celular / tecla Esc no computador ──
+// Fecha automaticamente o overlay/painel/modal aberto (o mais recente primeiro)
+// ou volta para a aba anterior, sempre que o usuário aciona o voltar do
+// aparelho ou pressiona Esc — sem precisar mexer em cada botão "fechar".
+(function () {
+  const SELETOR_OVERLAYS = '.modal-overlay, .painel-overlay';
+  let pilha = [{ tipo: 'tab', id: 'registrar' }]; // estado inicial: aba Registrar
+  let processandoPopstate = false; // true enquanto o próprio popstate está fechando algo
+  let ignorarProximoPopstate = false; // true quando somos nós que chamamos history.back() para sincronizar
+
+  function topo() { return pilha[pilha.length - 1]; }
+
+  function aberto(el) { return el.classList.contains('open'); }
+
+  function observarOverlays() {
+    document.querySelectorAll(SELETOR_OVERLAYS).forEach(function (el) {
+      if (!el.id) return;
+      new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          if (m.attributeName !== 'class') return;
+          const estaAberto = aberto(el);
+          const idx = pilha.findIndex(function (e) { return e.tipo === 'overlay' && e.id === el.id; });
+          if (estaAberto && idx === -1) {
+            // Overlay foi aberto (por qualquer código) → registra na pilha/histórico
+            pilha.push({ tipo: 'overlay', id: el.id });
+            if (!processandoPopstate) {
+              history.pushState({ profundidade: pilha.length }, '');
+            }
+          } else if (!estaAberto && idx !== -1) {
+            // Overlay foi fechado (por botão "fechar", clique fora, etc.)
+            pilha.splice(idx, 1);
+            if (!processandoPopstate) {
+              // Consome a entrada de histórico correspondente para manter tudo sincronizado
+              ignorarProximoPopstate = true;
+              history.back();
+            }
+          }
+        });
+      }).observe(el, { attributes: true, attributeFilter: ['class'] });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', observarOverlays);
+  } else {
+    observarOverlays();
+  }
+
+  // Envolve showTab para registrar troca de abas no histórico de navegação
+  const _showTabOriginal = window.showTab;
+  if (typeof _showTabOriginal === 'function') {
+    window.showTab = function (t, opts) {
+      const vindoDaNavegacao = opts && opts._voltar;
+      _showTabOriginal(t);
+      const ficouAtiva = document.getElementById('tab-' + t)?.classList.contains('active');
+      if (!ficouAtiva) return; // acesso bloqueado — não mexe no histórico
+      if (!vindoDaNavegacao) {
+        const t0 = topo();
+        if (!(t0 && t0.tipo === 'tab' && t0.id === t)) {
+          pilha.push({ tipo: 'tab', id: t });
+          if (!processandoPopstate) {
+            history.pushState({ profundidade: pilha.length }, '');
+          }
+        }
+      }
+    };
+  }
+
+  window.addEventListener('popstate', function (e) {
+    if (ignorarProximoPopstate) { ignorarProximoPopstate = false; return; }
+    processandoPopstate = true;
+    const profundidadeAlvo = (e.state && e.state.profundidade) || 1;
+    while (pilha.length > profundidadeAlvo) {
+      const item = pilha[pilha.length - 1];
+      if (item.tipo === 'overlay') {
+        const el = document.getElementById(item.id);
+        if (el) el.classList.remove('open');
+        pilha.pop();
+      } else if (item.tipo === 'tab') {
+        pilha.pop();
+        const anterior = topo();
+        if (anterior && anterior.tipo === 'tab') {
+          (window.showTab)(anterior.id, { _voltar: true });
+        }
+      } else {
+        pilha.pop();
+      }
+    }
+    processandoPopstate = false;
+  });
+
+  // Marca o estado inicial no histórico
+  history.replaceState({ profundidade: 1 }, '');
+
+  // Esc no computador = mesmo comportamento do botão voltar do celular
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') history.back();
   });
 })();
 </script>
