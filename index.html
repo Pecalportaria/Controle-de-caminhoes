@@ -78,7 +78,34 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, or
   --text:#0D1B2A;
   --radius:10px;--radius-lg:16px;
 }
-body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-height:100vh}
+#app-shell{display:flex;flex-direction:column;min-height:100vh;background:#0A1628}
+
+/* No desktop, mostra o app dentro de uma "moldura" no tamanho de celular,
+   centralizada na tela, em vez de esticar para a largura toda do navegador. */
+@media (min-width:701px){
+  body{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#03070E;
+    padding:24px;
+  }
+  #app-shell{
+    width:430px;
+    height:min(900px,calc(100vh - 48px));
+    max-height:900px;
+    border-radius:40px;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 0 0 10px #111418,0 0 0 12px #2b2f36,0 30px 80px rgba(0,0,0,.6);
+    /* Cria um novo "containing block": elementos com position:fixed dentro
+       do app passam a se posicionar relativos a esta moldura, não à janela
+       inteira do navegador — assim os overlays/modais ficam dentro do celular. */
+    transform:translateZ(0);
+  }
+}
 
 /* HEADER */
 .header{background:linear-gradient(180deg,#0D1F3C 0%,#0A1628 100%);padding:14px 16px 10px;border-bottom:2px solid #1565C0}
@@ -298,6 +325,8 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
 </style>
 </head>
 <body>
+
+<div id="app-shell">
 
 <div class="header">
   <div class="header-top">
@@ -755,6 +784,8 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
     <button onclick="fecharGerenciarPorteiros()" style="width:100%;padding:11px;margin-top:12px;background:transparent;color:#546E7A;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase">Fechar</button>
   </div>
 </div>
+
+</div><!-- /#app-shell -->
 
 <script>
 window.addEventListener('error', function(e) {
@@ -1948,7 +1979,8 @@ function showTab(t) {
   }
   
   const hh = (document.querySelector('.header')?.offsetHeight||0) + (document.querySelector('.tabs')?.offsetHeight||0);
-  const avail = window.innerHeight - hh;
+  const alturaBase = document.getElementById('app-shell')?.clientHeight || window.innerHeight;
+  const avail = alturaBase - hh;
   if (t==='lista') {
     document.getElementById('tab-lista').style.height = avail + 'px';
     renderLista();
