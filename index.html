@@ -628,7 +628,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
           <button class="modal-close" onclick="document.getElementById('patio-overlay').classList.remove('open')" style="padding:6px">✕</button>
         </div>
       </div>
-      <div style="font-size:12px;color:#546E7A;margin-bottom:12px" id="patio-resumo">Caminhões atualmente dentro da empresa</div>
+      <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:12px" id="patio-resumo">Caminhões atualmente dentro da empresa</div>
     </div>
     <div id="patio-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
   </div>
@@ -642,7 +642,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
         <span>🛣️ RUA</span>
         <button class="modal-close" onclick="document.getElementById('rua-overlay').classList.remove('open')">✕</button>
       </div>
-      <div style="font-size:12px;color:#546E7A;margin-bottom:12px" id="rua-resumo">Caminhões atualmente na rua</div>
+      <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:12px" id="rua-resumo">Caminhões atualmente na rua</div>
     </div>
     <div id="rua-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
   </div>
@@ -2961,12 +2961,12 @@ function renderPatio() {
   if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' no pátio';
 
   el.innerHTML = patio.map(r => `
-    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#FDD835' : '#1565C030'};border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:8px;display:grid;grid-template-columns:124px 1fr;gap:6px;align-items:center">
+    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#FDD835' : '#1565C030'};border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:8px;display:grid;grid-template-columns:108px 1fr;gap:6px;align-items:center">
       <div style="display:flex;flex-direction:column;align-items:center;gap:6px;border-right:1px solid #1565C030;padding-right:6px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:#FFD600;letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;color:#FFD600;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
         <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="cursor:pointer;font-size:11px;padding:2px 10px" onclick="alterarStatusPatio('${r.cavalo}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
       </div>
-      <div style="padding-left:14px;text-align:left">
+      <div style="padding-left:8px;text-align:left">
         <div style="font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtD(r.data)} às ${r.entrada}</div>
         <div style="font-size:12px;color:#90CAF9;margin-top:3px">${r.motorista||'—'}</div>
         ${r._ajusteManual && !/novo cadastro no banco de dados|cavalo sem uso/i.test(r.destino || '') ? `<div style="font-size:10px;color:#CE93D8;margin-top:3px">🔧 ${r.destino}</div>` : ''}
@@ -3041,12 +3041,12 @@ function renderRua() {
   if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' na rua';
 
   el.innerHTML = rua.map(r => `
-    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:8px;display:grid;grid-template-columns:124px 1fr;gap:6px;align-items:center">
+    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:8px;display:grid;grid-template-columns:108px 1fr;gap:6px;align-items:center">
       <div style="display:flex;flex-direction:column;align-items:center;gap:6px;border-right:1px solid #1565C030;padding-right:6px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:#FFD600;letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;color:#FFD600;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
         <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:11px;padding:2px 10px">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
       </div>
-      <div style="padding-left:14px;text-align:left">
+      <div style="padding-left:8px;text-align:left">
         <div style="font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtD(r.data)} às ${r.saida}</div>
         <div style="font-size:12px;color:#90CAF9;margin-top:3px">${r.motorista||'—'}</div>
         <div style="font-size:12px;color:#FFB74D;margin-top:3px">${r.destino||'—'}</div>
