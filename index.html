@@ -613,6 +613,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
       <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
       <button class="btn-csv" onclick="abrirBancoCavalos()" style="background:#6A1B9A20;border-color:#8E24AA40;color:#CE93D8;padding:14px;font-size:14px;text-align:center">🗄️ BANCO DE DADOS — PLACAS</button>
+      <button class="btn-csv" onclick="abrirEncerrarTurnoRemoto()" style="background:#8B1A1A20;border-color:#C6282840;color:#EF9A9A;padding:14px;font-size:14px;text-align:center">🔒 ENCERRAR TURNO REMOTAMENTE</button>
     </div>
   </div>
 </div>
@@ -940,6 +941,34 @@ const stepsConfig = [
 
 // ── Sistema de Turno / Login de Porteiros ─────────────
 const PORTEIROS_KEY = 'ctrl_porteiros';
+
+// ── Senha mestra (protegida por hash SHA-256) ──────────
+// Usada apenas para encerrar remotamente o turno de outro aparelho (perdido,
+// roubado ou com defeito) — veja abrirEncerrarTurnoRemoto().
+// A senha em si NÃO fica salva no código — só esta "impressão digital"
+// irreversível dela (hash SHA-256). Quem ler este arquivo não consegue
+// descobrir a senha a partir daqui.
+//
+// Para trocar a senha: peça para o Claude gerar o novo hash e substituir
+// o valor abaixo (não dá para simplesmente digitar a senha nova aqui).
+const SENHA_MESTRA_HASH = '8697646c872093f30a88b8cb0e59fb166d8f4bdb343f18a7e8c09da58c083c98';
+
+async function sha256Hex(texto) {
+  const dados = new TextEncoder().encode(texto);
+  const buffer = await crypto.subtle.digest('SHA-256', dados);
+  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function ehSenhaMestra(s) {
+  if (!s) return false;
+  try {
+    const hash = await sha256Hex(s);
+    return hash === SENHA_MESTRA_HASH;
+  } catch (e) {
+    console.error('Erro ao conferir senha mestra:', e);
+    return false;
+  }
+}
 // Sessão persiste indefinidamente até logout manual
 
 function getPorteiros() {
@@ -1124,7 +1153,7 @@ async function confirmarLoginTurno() {
   const senha = document.getElementById('login-senha').value;
   const porteiros = getPorteiros();
   const p = porteiros.find(x => x.nome === nome);
-  if (!p || p.senha !== senha) { toast('Senha incorreta!'); return; }
+  if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
 
   try {
     await window._setDoc(window._doc('config', 'turno'), { nome: p.nome, inicio: Date.now() });
@@ -1154,6 +1183,35 @@ function fazerLogoutTurno() {
       toast('Erro ao conectar — tente novamente');
     }
   });
+}
+
+// Encerra o turno de QUALQUER aparelho, de qualquer outro aparelho — para usar
+// quando o celular que estava logado for perdido, roubado ou quebrar e não
+// puder mais ser acessado para fazer logout normalmente. Exige especificamente
+// a senha mestra (não a senha do porteiro), já que é uma ação de recuperação.
+function abrirEncerrarTurnoRemoto() {
+  if (!turnoAtivo()) {
+    toast('Nenhum turno ativo no momento');
+    return;
+  }
+  const nomeAtual = getTurno().nome;
+  document.getElementById('config-overlay').classList.remove('open');
+  pedirSenha(
+    'Encerrar turno remotamente',
+    'Turno ativo agora: ' + nomeAtual + '. Digite a SENHA MESTRA para encerrar (uso em caso de aparelho perdido, roubado ou com defeito).',
+    async function(senha) {
+      if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
+      try {
+        await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0 });
+        // Se este aparelho por acaso for o mesmo que estava logado, limpa o registro local também
+        if (localStorage.getItem('meu_turno') === nomeAtual) localStorage.removeItem('meu_turno');
+        toast('Turno de ' + nomeAtual + ' encerrado remotamente');
+      } catch(e) {
+        console.error('Erro ao encerrar turno remotamente:', e);
+        toast('Erro ao conectar — tente novamente');
+      }
+    }
+  );
 }
 
 // ── Gerenciar Porteiros ────────────────────────────────
