@@ -2966,8 +2966,8 @@ function renderPatio() {
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:#FFD600;letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
         <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="cursor:pointer;font-size:11px;padding:2px 10px" onclick="alterarStatusPatio('${r.cavalo}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
       </div>
-      <div style="padding-left:14px;text-align:right">
-        <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.entrada}</div>
+      <div style="padding-left:14px;text-align:left">
+        <div style="font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtD(r.data)} às ${r.entrada}</div>
         <div style="font-size:12px;color:#90CAF9;margin-top:3px">${r.motorista||'—'}</div>
         ${r._ajusteManual && !/novo cadastro no banco de dados|cavalo sem uso/i.test(r.destino || '') ? `<div style="font-size:10px;color:#CE93D8;margin-top:3px">🔧 ${r.destino}</div>` : ''}
         ${r._statusAlterado ? `<div style="font-size:10px;color:#FFB74D;margin-top:3px">↻ Status atualizado no pátio</div>` : ''}
@@ -3046,8 +3046,8 @@ function renderRua() {
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:#FFD600;letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
         <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:11px;padding:2px 10px">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
       </div>
-      <div style="padding-left:14px;text-align:right">
-        <div style="font-size:14px;font-weight:700;color:#fff">${fmtD(r.data)} às ${r.saida}</div>
+      <div style="padding-left:14px;text-align:left">
+        <div style="font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtD(r.data)} às ${r.saida}</div>
         <div style="font-size:12px;color:#90CAF9;margin-top:3px">${r.motorista||'—'}</div>
         <div style="font-size:12px;color:#FFB74D;margin-top:3px">${r.destino||'—'}</div>
       </div>
@@ -3183,6 +3183,14 @@ atualizarTurnoBar();
     while (pilha.length > profundidadeAlvo) {
       const item = pilha[pilha.length - 1];
       if (item.tipo === 'overlay') {
+        // Caso especial: o painel de registro (formulário de várias etapas)
+        // não deve fechar de uma vez com o botão voltar — cada toque deve
+        // voltar um passo do formulário, só fechando de fato no 1º passo.
+        if (item.id === 'painel-overlay' && typeof stepAtual !== 'undefined' && stepAtual > 1 && typeof voltarStep === 'function') {
+          voltarStep();
+          history.pushState({ profundidade: pilha.length }, '');
+          break;
+        }
         const el = document.getElementById(item.id);
         if (el) el.classList.remove('open');
         pilha.pop();
