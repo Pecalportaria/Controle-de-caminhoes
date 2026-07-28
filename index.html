@@ -736,7 +736,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
   <div style="background:#0D1F3C;border-radius:var(--radius-lg);width:100%;max-width:340px;padding:24px 20px;border:1px solid #1565C040">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:6px;letter-spacing:.04em" id="senha-titulo">Senha</div>
     <div style="font-size:12px;color:#546E7A;margin-bottom:16px" id="senha-subtitulo"></div>
-    <input type="password" id="senha-input" placeholder="Digite a senha"
+    <input type="password" id="senha-input" placeholder="Digite a senha" inputmode="numeric"
       style="width:100%;padding:12px 14px;background:#102040;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:16px;color:#fff;outline:none;margin-bottom:14px"
       onkeydown="if(event.key==='Enter')confirmarSenha()">
     <div style="display:flex;gap:10px">
@@ -1223,7 +1223,8 @@ function abrirEncerrarTurnoRemoto() {
         console.error('Erro ao encerrar turno remotamente:', e);
         toast('Erro ao conectar — tente novamente');
       }
-    }
+    },
+    true // teclado alfanumérico — a senha mestra tem letras e símbolos
   );
 }
 
@@ -2449,13 +2450,19 @@ function _confirmarBitrem() {
 
 let _senhaCallback = null;
 
-function pedirSenha(titulo, subtitulo, callback) {
+function pedirSenha(titulo, subtitulo, callback, alfanumerico) {
   document.getElementById('senha-titulo').textContent = titulo;
   document.getElementById('senha-subtitulo').textContent = subtitulo;
-  document.getElementById('senha-input').value = '';
+  const campo = document.getElementById('senha-input');
+  campo.value = '';
+  if (alfanumerico) {
+    campo.removeAttribute('inputmode');
+  } else {
+    campo.setAttribute('inputmode', 'numeric');
+  }
   _senhaCallback = callback;
   document.getElementById('senha-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('senha-input').focus(), 100);
+  setTimeout(() => campo.focus(), 100);
 }
 
 function confirmarSenha() {
