@@ -573,8 +573,6 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
         <button class="btn-salvar" style="flex:0 0 auto;padding:10px 16px" onclick="cadastrarCavaloBanco()">Cadastrar</button>
       </div>
 
-      <button class="btn-csv" onclick="importarPlacasDoHistorico()" style="width:100%;padding:10px;font-size:12px;margin-bottom:14px">🔄 Importar placas já usadas no histórico</button>
-
       <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px" id="banco-resumo">Placas cadastradas</div>
     </div>
     <div id="banco-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
@@ -2815,58 +2813,71 @@ function cavaloExisteNoBanco(cavalo) {
   return cavalosCadastrados.some(c => c.cavalo === key);
 }
 
-// Importa para o banco de dados as placas de cavalo que já aparecem no
-// histórico de registros (entradas/saídas), mas ainda não estão cadastradas.
-function importarPlacasDoHistorico() {
-  const jaCadastradas = new Set(cavalosCadastrados.map(c => c.cavalo));
-  const encontradasNoHistorico = {}; // cavalo -> data mais antiga encontrada
-
-  regs.forEach(r => {
-    if (!r.cavalo) return;
-    const key = r.cavalo.trim().toUpperCase();
-    if (!key || jaCadastradas.has(key)) return;
-    if (!encontradasNoHistorico[key] || r.data < encontradasNoHistorico[key]) {
-      encontradasNoHistorico[key] = r.data;
-    }
-  });
-
-  const novasPlacas = Object.keys(encontradasNoHistorico).sort((a,b) => a.localeCompare(b, 'pt-BR', {numeric:true}));
-
-  if (!novasPlacas.length) {
-    toast('Nenhuma placa nova encontrada no histórico');
-    return;
-  }
+// Exclui uma placa do banco de dados de cavalos cadastrados E também a remove
+// do Pátio e da Rua (o cavalo pode ter sido vendido e não faz mais parte da
+// frota). O histórico de entradas/saídas dessa placa NÃO é apagado — apenas
+// deixa de ser exibida como um cavalo ativo no pátio/rua.
+function excluirPlacaBanco(cavalo) {
+  const key = (cavalo || '').trim().toUpperCase();
+  if (!key) return;
 
   confirmarAcao(
-    'Importar do histórico',
-    'Encontramos ' + novasPlacas.length + ' placa' + (novasPlacas.length !== 1 ? 's' : '') + ' no histórico que ainda não ' + (novasPlacas.length !== 1 ? 'estão' : 'está') + ' no banco de dados: ' + novasPlacas.join(', ') + '. Deseja cadastrá-las agora?',
+    'Excluir placa',
+    'Tem certeza que deseja excluir ' + key + ' do banco de dados de placas? Ela também será removida do Pátio e da Rua. O histórico de entradas/saídas será mantido, mas a placa deixará de ser reconhecida como parte da frota.',
     (sim) => {
       if (!sim) return;
 
+      if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
       const t = getTurno();
-      if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
-      const porteiros = getPorteiros();
-      const p = porteiros.find(x => x.nome === t.nome);
 
-      pedirSenha('Importar placas', 'Digite a senha de ' + t.nome + ' para cadastrar ' + novasPlacas.length + ' placa(s) do histórico', async function(senha) {
-        if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
-        let sucesso = 0;
-        for (const cavalo of novasPlacas) {
-          try {
-            const registro = { cavalo, dataCadastro: encontradasNoHistorico[cavalo] || hoje(), porteiro: t.nome + ' (importado)' };
-            if (window._fbReady) {
-              await window._setDoc(window._doc('cavalosCadastrados', cavalo), registro);
-            } else {
-              cavalosCadastrados = cavalosCadastrados.filter(c => c.cavalo !== cavalo);
-              cavalosCadastrados.push(registro);
-            }
-            sucesso++;
-          } catch(e) {
-            console.error('Erro ao importar placa ' + cavalo + ':', e);
+      pedirSenha('Excluir placa', 'Digite a senha para confirmar a exclusão de ' + key, async function(senha) {
+        if (senha !== '2026') { toast('Senha incorreta!'); return; }
+        try {
+          // 1) Remove do banco de placas cadastradas
+          if (window._fbReady) {
+            await window._deleteDoc(window._doc('cavalosCadastrados', key));
+          } else {
+            cavalosCadastrados = cavalosCadastrados.filter(c => c.cavalo !== key);
           }
+
+          // 2) Registra ajuste manual de "retirar", que faz o cálculo automático
+          // deixar de exibir essa placa tanto no Pátio quanto na Rua
+          const ajuste = {
+            cavalo: key,
+            tipo: 'retirar',
+            carreta: '',
+            motorista: '',
+            situacao: 'vazio',
+            motivo: 'Placa excluída do banco de dados (venda/baixa)',
+            data: hoje(),
+            hora: horaAgora(),
+            porteiro: t.nome
+          };
+          if (window._fbReady) {
+            await window._setDoc(window._doc('ajustesPatio', key), ajuste);
+          } else {
+            ajustesPatio = ajustesPatio.filter(a => a.cavalo !== key);
+            ajustesPatio.push(ajuste);
+          }
+
+          // 3) Limpa eventual status manual (carregado/vazio) pendente para essa placa
+          if (statusAtualPatio.some(s => (s.cavalo || '').toUpperCase() === key)) {
+            if (window._fbReady) {
+              await window._deleteDoc(window._doc('statusAtualPatio', key));
+            } else {
+              statusAtualPatio = statusAtualPatio.filter(s => s.cavalo !== key);
+            }
+          }
+
+          toast('Placa ' + key + ' excluída do banco, do Pátio e da Rua');
+          renderBancoCavalos();
+          renderListaAjustes();
+          renderPatio();
+          renderRua();
+        } catch(e) {
+          console.error('Erro ao excluir placa ' + key + ':', e);
+          toast('Erro ao excluir placa');
         }
-        toast(sucesso + ' placa' + (sucesso !== 1 ? 's' : '') + ' importada' + (sucesso !== 1 ? 's' : '') + ' do histórico!');
-        renderBancoCavalos();
       });
     }
   );
@@ -2897,11 +2908,14 @@ function renderBancoCavalos() {
   if (resumoEl) resumoEl.textContent = lista.length + ' placa' + (lista.length !== 1 ? 's' : '') + ' cadastrada' + (lista.length !== 1 ? 's' : '');
 
   el.innerHTML = lista.map(c => `
-    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:#FFD600;letter-spacing:.12em">${c.cavalo}</div>
-      <div style="text-align:right">
-        <div style="font-size:11px;color:#546E7A">${fmtD(c.dataCadastro)}</div>
-        <div style="font-size:10px;color:#546E7A">por ${c.porteiro||'—'}</div>
+      <div style="text-align:right;display:flex;align-items:center;gap:10px">
+        <div>
+          <div style="font-size:11px;color:#546E7A">${fmtD(c.dataCadastro)}</div>
+          <div style="font-size:10px;color:#546E7A">por ${c.porteiro||'—'}</div>
+        </div>
+        <button onclick="excluirPlacaBanco('${c.cavalo.replace(/'/g,"\\'")}')" title="Excluir placa" style="flex:0 0 auto;background:#8B1A1A20;border:1px solid #C6282840;color:#EF9A9A;border-radius:8px;padding:8px 10px;font-size:14px;cursor:pointer">🗑️</button>
       </div>
     </div>
   `).join('');
@@ -3103,7 +3117,7 @@ function aplicarAjustesRua(listaRua) {
   return listaRua.filter(r => {
     const key = r.cavalo.toUpperCase();
     const aj = ajustesPatio.find(a => (a.cavalo || '').toUpperCase() === key);
-    if (!aj || aj.tipo !== 'incluir') return true;
+    if (!aj) return true;
 
     const ajusteDt = (aj.data || '') + (aj.hora || '');
     const ultimoReal = _ultimoEventoPorCavalo[key];
@@ -3113,8 +3127,11 @@ function aplicarAjustesRua(listaRua) {
     // está desatualizado — mantém o cavalo na Rua normalmente.
     if (realDt && realDt > ajusteDt) return true;
 
-    // Ajuste manual "incluir" ainda válido — remove da Rua (ele está no pátio)
-    return false;
+    // Ajuste manual "incluir" (o cavalo está no pátio) ou "retirar" (ex: placa
+    // vendida/excluída do banco) ainda válido — remove da Rua nos dois casos.
+    if (aj.tipo === 'incluir' || aj.tipo === 'retirar') return false;
+
+    return true;
   });
 }
 
