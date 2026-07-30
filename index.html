@@ -2307,6 +2307,11 @@ function renderLista() {
       </div>
     </div>
   `}).join('');
+
+  // Rola a página para o final, mostrando o registro mais recente
+  requestAnimationFrame(() => {
+    window.scrollTo(0, document.body.scrollHeight);
+  });
 }
 
 function exportCSV() {
