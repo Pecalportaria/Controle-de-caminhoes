@@ -3271,7 +3271,11 @@ atualizarTurnoBar();
     observarOverlays();
   }
 
-  // Envolve showTab para registrar troca de abas no histórico de navegação
+  // Envolve showTab para registrar troca de abas no histórico de navegação.
+  // Abas são "irmãs" (Registrar / Registros / Histórico) — sair da tela
+  // inicial empilha UM único nível de "fora do início"; alternar entre as
+  // outras abas não deve empilhar mais nada, para que baste UM toque em
+  // voltar/Esc, de qualquer aba, para retornar direto à tela inicial.
   const _showTabOriginal = window.showTab;
   if (typeof _showTabOriginal === 'function') {
     window.showTab = function (t, opts) {
@@ -3279,13 +3283,36 @@ atualizarTurnoBar();
       _showTabOriginal(t);
       const ficouAtiva = document.getElementById('tab-' + t)?.classList.contains('active');
       if (!ficouAtiva) return; // acesso bloqueado — não mexe no histórico
-      if (!vindoDaNavegacao) {
-        const t0 = topo();
-        if (!(t0 && t0.tipo === 'tab' && t0.id === t)) {
-          pilha.push({ tipo: 'tab', id: t });
+      if (vindoDaNavegacao) return; // já sincronizado pelo popstate
+
+      const t0 = topo();
+      const estavaForaDoInicio = t0 && t0.tipo === 'tab' && t0.id !== 'registrar';
+
+      if (t === 'registrar') {
+        // Voltou para a tela inicial por um clique normal na aba — remove o
+        // nível "fora do início" da pilha e do histórico do navegador.
+        if (estavaForaDoInicio) {
+          pilha.pop();
           if (!processandoPopstate) {
-            history.pushState({ profundidade: pilha.length }, '');
+            ignorarProximoPopstate = true;
+            history.back();
           }
+        }
+        return;
+      }
+
+      if (estavaForaDoInicio) {
+        // Já estava em Registros/Histórico — apenas troca qual aba será
+        // restaurada ao voltar, sem empilhar um novo nível.
+        t0.id = t;
+        if (!processandoPopstate) {
+          history.replaceState({ profundidade: pilha.length }, '');
+        }
+      } else {
+        // Primeira saída da tela inicial — empilha o único nível "fora do início".
+        pilha.push({ tipo: 'tab', id: t });
+        if (!processandoPopstate) {
+          history.pushState({ profundidade: pilha.length }, '');
         }
       }
     };
