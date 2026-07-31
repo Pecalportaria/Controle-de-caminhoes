@@ -699,35 +699,11 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
     <div style="display:flex;gap:10px">
       <button onclick="_escolherTipoCarreta('CAVALO')" style="flex:1;padding:14px;background:#1565C0;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-transform:uppercase">Cavalo</button>
       <button onclick="_escolherTipoCarreta('TRUCK')" style="flex:1;padding:14px;background:#546E7A;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-transform:uppercase">Truck</button>
-      <button onclick="_abrirBitremDoModal()" style="flex:1;padding:14px;background:#37474F;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-transform:uppercase">Bitrem</button>
+      <button onclick="_escolherTipoCarreta('BITREM')" style="flex:1;padding:14px;background:#37474F;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-transform:uppercase">Bitrem</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL BITREM (duas carretas) -->
-<div class="modal-overlay" id="bitrem-overlay" style="align-items:center;padding:0 24px">
-  <div style="background:#0D1F3C;border-radius:var(--radius-lg);width:100%;max-width:340px;padding:24px 20px;border:1px solid #1565C040">
-    <div style="font-size:28px;text-align:center;margin-bottom:10px">🚛🚛</div>
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#fff;text-align:center;margin-bottom:8px;letter-spacing:.04em">Bitrem — informe as carretas</div>
-    <div style="font-size:12px;color:#90A4AE;text-align:center;margin-bottom:16px">Placas opcionais — preencha nenhuma, uma ou as duas</div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Carreta 1 (opcional)</div>
-      <input type="text" id="bitrem-c1" placeholder="Ex: 5D22" maxlength="4" inputmode="text" autocomplete="off"
-        oninput="this.value=this.value.toUpperCase()"
-        style="width:100%;padding:12px 14px;background:#102040;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:18px;color:#fff;outline:none;text-align:center;letter-spacing:.12em">
-    </div>
-    <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Carreta 2 (opcional)</div>
-      <input type="text" id="bitrem-c2" placeholder="Ex: 5D23" maxlength="4" inputmode="text" autocomplete="off"
-        oninput="this.value=this.value.toUpperCase()"
-        style="width:100%;padding:12px 14px;background:#102040;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:18px;color:#fff;outline:none;text-align:center;letter-spacing:.12em">
-    </div>
-    <div style="display:flex;gap:10px">
-      <button onclick="_cancelarBitrem()" style="flex:1;padding:11px;background:transparent;color:#546E7A;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase">Cancelar</button>
-      <button onclick="_confirmarBitrem()" style="flex:1;padding:11px;background:#1565C0;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase">Confirmar</button>
-    </div>
-  </div>
-</div>
 
 <!-- MODAL SENHA -->
 <div class="modal-overlay" id="senha-overlay" style="align-items:center;padding:0 24px;z-index:430">
@@ -1883,8 +1859,9 @@ function _cancelarDuplicata() {
   document.getElementById('revisao-overlay').classList.add('open');
 }
 
-// Fechar revisão clicando fora
-document.getElementById('revisao-overlay').addEventListener('click', function(e) {
+// Fechar revisão clicando fora (mousedown captura o alvo real antes de
+// qualquer reposicionamento anti-teclado disparado pelo foco do campo)
+document.getElementById('revisao-overlay').addEventListener('mousedown', function(e) {
   if (e.target === this) fecharRevisao();
 });
 
@@ -1935,17 +1912,6 @@ function avancarStep() {
     // Fechar teclado antes de abrir modal
     document.activeElement && document.activeElement.blur();
     setTimeout(() => document.getElementById('carreta-tipo-overlay').classList.add('open'), 150);
-    return;
-  }
-  // Se digitou BITREM → abrir modal das duas carretas
-  if (stepAtual===7 && vals.carreta && vals.carreta.toUpperCase() === 'BITREM') {
-    document.activeElement && document.activeElement.blur();
-    setTimeout(() => {
-      document.getElementById('bitrem-c1').value = '';
-      document.getElementById('bitrem-c2').value = '';
-      document.getElementById('bitrem-overlay').classList.add('open');
-      setTimeout(() => document.getElementById('bitrem-c1').focus(), 200);
-    }, 150);
     return;
   }
   if (stepAtual===7) {
@@ -2226,8 +2192,13 @@ async function salvarEdicao() {
   }
 }
 
-document.getElementById('modal-overlay').addEventListener('click', function(e) {
-  if (e.target===this) fecharModal();
+document.getElementById('modal-overlay').addEventListener('mousedown', function(e) {
+  // Usa 'mousedown' (não 'click'): o toque no campo Destino foca o input e
+  // isso reposiciona o modal para o topo da tela (lógica anti-teclado) ANTES
+  // do evento 'click' ser disparado — o que fazia o clique "errar" o campo e
+  // cair no fundo escuro, fechando o modal sem deixar editar. 'mousedown'
+  // captura o alvo real do toque antes desse reposicionamento acontecer.
+  if (e.target === this) fecharModal();
 });
 
 function renderLista() {
@@ -2408,47 +2379,11 @@ function renderHistorico() {
   ).join('');
 }
 
-// ── Modal Cavalo ou Truck ──────────────────────────────
+// ── Modal Cavalo, Truck ou Bitrem ──────────────────────
 function _escolherTipoCarreta(tipo) {
   document.getElementById('carreta-tipo-overlay').classList.remove('open');
   vals.carreta = tipo;
   abrirRevisao();
-}
-
-function _abrirBitremDoModal() {
-  document.getElementById('carreta-tipo-overlay').classList.remove('open');
-  document.getElementById('bitrem-c1').value = '';
-  document.getElementById('bitrem-c2').value = '';
-  document.getElementById('bitrem-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('bitrem-c1').focus(), 200);
-}
-
-// ── Modal Bitrem (duas carretas) ───────────────────────
-function _cancelarBitrem() {
-  document.getElementById('bitrem-overlay').classList.remove('open');
-}
-
-function _confirmarBitrem() {
-  const c1 = document.getElementById('bitrem-c1').value.trim().toUpperCase();
-  const c2 = document.getElementById('bitrem-c2').value.trim().toUpperCase();
-
-  // Ambas as placas são opcionais — só valida o formato de quem foi preenchido
-  if (c1 && c1.length !== 4) { toast('Carreta 1: use 4 dígitos ou deixe em branco'); return; }
-  if (c2 && c2.length !== 4) { toast('Carreta 2: use 4 dígitos ou deixe em branco'); return; }
-
-  document.activeElement && document.activeElement.blur();
-  document.getElementById('bitrem-overlay').classList.remove('open');
-
-  if (c1 && c2) {
-    vals.carreta = c1 + '/' + c2;       // as duas placas informadas
-  } else if (c1) {
-    vals.carreta = c1;                   // apenas a carreta 1
-  } else if (c2) {
-    vals.carreta = c2;                   // apenas a carreta 2
-  } else {
-    vals.carreta = 'BITREM';             // nenhuma placa informada
-  }
-  setTimeout(() => abrirRevisao(), 50);
 }
 
 let _senhaCallback = null;
@@ -3346,6 +3281,22 @@ atualizarTurnoBar();
         pilha.pop();
       }
     }
+
+    // Garantia extra: a tela inicial (Registrar) deve ser sempre a última
+    // exibida antes do app fechar. Se por algum motivo (ex: overlay aberto
+    // por um fluxo fora do padrão) a pilha já estiver na base mas a aba
+    // inicial não estiver visível, força a exibição dela e consome este
+    // "voltar" para reforçar o nível, deixando o fechamento apenas para o
+    // próximo toque.
+    if (pilha.length <= 1) {
+      const tabRegistrarAtiva = document.getElementById('tab-registrar')?.classList.contains('active');
+      if (!tabRegistrarAtiva) {
+        pilha = [{ tipo: 'tab', id: 'registrar' }];
+        (window.showTab)('registrar', { _voltar: true });
+        history.pushState({ profundidade: 1 }, '');
+      }
+    }
+
     processandoPopstate = false;
   });
 
