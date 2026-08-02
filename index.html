@@ -481,7 +481,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
     </div>
     <div class="form-card">
       <div class="form-row"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="r-cavalo" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
-      <div class="form-row"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="r-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div></div>
+      <div class="form-row" style="position:relative"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="r-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div><span id="r-carreta-pendente-aviso" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🕓</span></div>
       <div class="form-row"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="r-motorista" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
       <div class="form-row"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="r-data" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"></div></div>
       <div class="form-row">
@@ -492,7 +492,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
         </div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="r-sit-car" onclick="setRevisaoSit('carregado')">Carregado</button><button class="sit-btn" id="r-sit-vaz" onclick="setRevisaoSit('vazio')">Vazio</button></div></div>
-      <div class="form-row" style="border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="r-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
+      <div class="form-row" style="border-bottom:none;position:relative"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="r-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div><span id="r-destino-pendente-aviso" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🕓</span></div>
     </div>
     <button onclick="confirmarSalvar()" style="width:100%;padding:14px;background:#2E7D32;color:#fff;border:none;border-radius:var(--radius-lg);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.06em">Confirmar ✓</button>
   </div>
@@ -701,6 +701,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
       <button onclick="_escolherTipoCarreta('TRUCK')" style="flex:1;padding:14px;background:#546E7A;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-transform:uppercase">Truck</button>
       <button onclick="_escolherTipoCarreta('BITREM')" style="flex:1;padding:14px;background:#37474F;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-transform:uppercase">Bitrem</button>
     </div>
+    <button onclick="_definirCarretaPendente()" style="width:100%;margin-top:10px;padding:11px;background:transparent;color:#FFB74D;border:1px solid #E6510060;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.04em">🕓 Definir depois</button>
   </div>
 </div>
 
@@ -858,7 +859,7 @@ if (window._fbError) {
 }
 
 // Armazena valores entre steps
-const vals = {cavalo:'',carreta:'',motorista:'',data:'',entrada:'',saida:'',destino:'',standBy:false};
+const vals = {cavalo:'',carreta:'',motorista:'',data:'',entrada:'',saida:'',destino:'',standBy:false,carretaPendente:false,destinoPendente:false};
 
 function hoje() {
   const d = new Date();
@@ -1551,7 +1552,10 @@ function renderStep() {
     const isSugestao = ['motorista','carreta','destino'].includes(s.key) && window._sugestoes && window._sugestoes[s.key] && window._sugestoes[s.key] === val;
     const inputStyle = isSugestao ? 'border-bottom-color:#43A047;color:#81C784' : '';
     const hint = isSugestao ? '<div style="font-size:11px;color:#43A047;margin-bottom:6px;letter-spacing:.04em">✦ Sugestão baseada no histórico — toque para editar</div>' : '';
-    cont.innerHTML = hint+'<input type="text" id="painel-inp" class="painel-input" placeholder="'+s.ph+'" maxlength="'+s.maxlen+'" inputmode="'+s.mode+'" value="'+val+'" autocomplete="off" style="'+inputStyle+'">';
+    const hintPendente = (s.key==='destino') ? '<div style="font-size:11px;color:#546E7A;text-align:center;margin-top:10px">Deixe em branco e toque em Próximo para marcar como pendente 🕓</div>'
+                        : (s.key==='carreta') ? '<div style="font-size:11px;color:#546E7A;text-align:center;margin-top:10px">Deixe em branco para escolher o tipo (ou definir depois 🕓)</div>'
+                        : '';
+    cont.innerHTML = hint+'<input type="text" id="painel-inp" class="painel-input" placeholder="'+s.ph+'" maxlength="'+s.maxlen+'" inputmode="'+s.mode+'" value="'+val+'" autocomplete="off" style="'+inputStyle+'">'+hintPendente;
     setTimeout(()=>{
       const inp = document.getElementById('painel-inp');
       if (!inp) return;
@@ -1685,12 +1689,12 @@ function setRevisaoSit(s) {
 function abrirRevisao() {
   // Preencher modal com valores atuais de vals
   document.getElementById('r-cavalo').value    = vals.cavalo    || '';
-  document.getElementById('r-carreta').value   = vals.carreta   || '';
+  document.getElementById('r-carreta').value   = vals.carretaPendente ? '' : (vals.carreta || '');
   document.getElementById('r-motorista').value = vals.motorista || '';
   document.getElementById('r-data').value      = vals.data      || hoje();
   document.getElementById('r-entrada').value   = vals.entrada   || '';
   document.getElementById('r-saida').value     = vals.standBy ? '' : (vals.saida || '');
-  document.getElementById('r-destino').value   = vals.destino   || '';
+  document.getElementById('r-destino').value   = vals.destinoPendente ? '' : (vals.destino || '');
   setRevisaoSit(sit);
   // Máscara nas horas
   ['r-entrada','r-saida'].forEach(id => {
@@ -1699,12 +1703,16 @@ function abrirRevisao() {
     el.parentNode.replaceChild(clone, el);
     maskHora(document.getElementById(id));
   });
-  // Stand By é definido lá no passo de hora (Enter em branco na saída);
-  // aqui só refletimos o estado, sem checkbox.
+  // Stand By / Carreta pendente / Destino pendente são definidos lá nos
+  // passos anteriores; aqui só refletimos o estado, sem checkbox.
   document.getElementById('r-standby-aviso').style.display = vals.standBy ? 'inline-block' : 'none';
   document.getElementById('r-saida').disabled = !!vals.standBy;
+  document.getElementById('r-carreta-pendente-aviso').style.display = vals.carretaPendente ? 'inline-block' : 'none';
+  document.getElementById('r-carreta').disabled = !!vals.carretaPendente;
+  document.getElementById('r-destino-pendente-aviso').style.display = vals.destinoPendente ? 'inline-block' : 'none';
+  document.getElementById('r-destino').disabled = !!vals.destinoPendente;
   // Fechar painel (apenas visualmente — NÃO resetar vals aqui, senão perdemos
-  // o estado de Stand By antes do usuário confirmar na tela de revisão)
+  // o estado de Stand By/pendentes antes do usuário confirmar na tela de revisão)
   document.getElementById('painel-overlay').classList.remove('open');
   document.getElementById('revisao-overlay').classList.add('open');
 }
@@ -1716,19 +1724,19 @@ function fecharRevisao() {
 function confirmarSalvar() {
   // Atualizar vals com eventuais correções feitas na revisão
   vals.cavalo    = document.getElementById('r-cavalo').value.trim();
-  vals.carreta   = document.getElementById('r-carreta').value.trim() || 'CAVALO';
+  vals.carreta   = vals.carretaPendente ? '' : (document.getElementById('r-carreta').value.trim() || 'CAVALO');
   vals.motorista = document.getElementById('r-motorista').value.trim();
   vals.data      = document.getElementById('r-data').value.trim();
   vals.entrada   = document.getElementById('r-entrada').value.trim();
   vals.saida     = vals.standBy ? '' : document.getElementById('r-saida').value.trim();
-  vals.destino   = document.getElementById('r-destino').value.trim();
+  vals.destino   = vals.destinoPendente ? '' : document.getElementById('r-destino').value.trim();
   sit = revisaoSit;
   // Validar campos obrigatórios
   if (!vals.cavalo || vals.cavalo.length !== 4) { toast('Placa do cavalo: 4 caracteres'); return; }
   if (!vals.motorista) { toast('Informe o motorista'); return; }
   if (!vals.data) { toast('Informe a data'); return; }
   if (!vals.entrada && !vals.saida && !vals.standBy) { toast('Informe entrada, saída ou stand by'); return; }
-  if (!vals.destino) { toast('Informe o destino'); return; }
+  if (!vals.destino && !vals.destinoPendente) { toast('Informe o destino'); return; }
 
   // Verificar inconsistências com base no histórico
   if (regs.length >= 5) {
@@ -1900,14 +1908,21 @@ function avancarStep() {
   if (stepAtual===3) { window._sugestoes = {}; aplicarSugestoes(vals.cavalo); sugerirInverso(vals.cavalo); }
   if (stepAtual===4 && !vals.motorista) { toast('Informe o motorista'); return; }
   if (stepAtual===5) {
-    if(!vals.destino){toast('Informe o destino');return;}
+    if (!vals.destino) {
+      // Nenhum destino informado: marca como pendente (definido depois)
+      vals.destinoPendente = true;
+      toast('Destino pendente — será definido depois 🕓');
+      stepAtual++; renderStep();
+      return;
+    }
+    vals.destinoPendente = false;
     verificarDestino(vals.destino, function(ok) {
       if (ok) { stepAtual++; renderStep(); }
     });
     return;
   }
   if (stepAtual===7 && !validarCarreta(vals.carreta)) { toast('Carreta: placa 4 dígitos ou Bitrem/Truck/Cavalo'); return; }
-  // Se carreta vazia ou igual ao cavalo → perguntar Cavalo ou Truck
+  // Se carreta vazia ou igual ao cavalo → perguntar Cavalo, Truck, Bitrem ou Depois
   if (stepAtual===7 && (!vals.carreta || vals.carreta === vals.cavalo)) {
     // Fechar teclado antes de abrir modal
     document.activeElement && document.activeElement.blur();
@@ -1915,6 +1930,7 @@ function avancarStep() {
     return;
   }
   if (stepAtual===7) {
+    vals.carretaPendente = false;
     abrirRevisao();
     return;
   }
@@ -1963,6 +1979,8 @@ function resetForm() {
   Object.keys(vals).forEach(k => vals[k]='');
   vals.data = hoje();
   vals.standBy = false;
+  vals.carretaPendente = false;
+  vals.destinoPendente = false;
   sit = 'carregado';
   stepAtual = 1;
   window._sugestoes = {};
@@ -1974,11 +1992,13 @@ async function addReg() {
   const cavaloDigitado = vals.cavalo;
   const reg = {
     id: Date.now(),
-    cavalo: vals.cavalo, carreta: vals.carreta || 'CAVALO',
+    cavalo: vals.cavalo, carreta: vals.carretaPendente ? '' : (vals.carreta || 'CAVALO'),
     motorista: vals.motorista, data: vals.data,
     entrada: vals.entrada, saida: vals.saida,
-    situacao: sit, destino: vals.destino,
-    standBy: !!vals.standBy
+    situacao: sit, destino: vals.destinoPendente ? '' : vals.destino,
+    standBy: !!vals.standBy,
+    carretaPendente: !!vals.carretaPendente,
+    destinoPendente: !!vals.destinoPendente
   };
   regs.unshift(reg);
   salvar();
@@ -2177,7 +2197,7 @@ async function salvarEdicao() {
   if (!dst)                  { toast('Informe o destino'); return; }
   const idx = regs.findIndex(x => x.id === editId);
   if (idx===-1) return;
-  regs[idx] = {...regs[idx], cavalo:cav, carreta:car, motorista:mot, data:dat, entrada:ent, saida:sai, situacao:editSit, destino:dst, standBy};
+  regs[idx] = {...regs[idx], cavalo:cav, carreta:car, motorista:mot, data:dat, entrada:ent, saida:sai, situacao:editSit, destino:dst, standBy, carretaPendente:false, destinoPendente:false};
   const regAtualizado = regs[idx];
   salvar(); fecharModal(); renderLista(); toast('Atualizado!');
   await salvarReg(regAtualizado);
@@ -2241,7 +2261,7 @@ function renderLista() {
         </div>
         <div class="reg-cell" style="min-height:40px;cursor:pointer" onclick="abrirHistoricoCarreta('${(r.carreta||'').replace(/'/g,"\\'")}')">
           <div class="reg-cell-label">Carreta</div>
-          <div class="reg-cell-val" style="font-size:20px">${r.carreta||'—'}</div>
+          <div class="reg-cell-val" style="font-size:${r.carretaPendente?'14px':'20px'};color:${r.carretaPendente?'#FFB74D':'#fff'}">${r.carretaPendente ? '🕓 Pendente' : (r.carreta||'—')}</div>
         </div>
 
         <!-- Linha 2: Motorista (mesclado) -->
@@ -2265,7 +2285,7 @@ function renderLista() {
 
         <!-- Linha 4: Destino (mesclado) -->
         <div class="reg-cell" style="grid-column:1/-1;min-height:40px">
-          <div class="reg-cell-val" style="font-size:20px;color:#FFFFFF">${r.destino||'—'}</div>
+          <div class="reg-cell-val" style="font-size:${r.destinoPendente?'14px':'20px'};color:${r.destinoPendente?'#FFB74D':'#FFFFFF'}">${r.destinoPendente ? '🕓 Destino pendente' : (r.destino||'—')}</div>
         </div>
 
         <!-- Linha 5: Confirmar saída (só quando Stand By) -->
@@ -2383,6 +2403,15 @@ function renderHistorico() {
 function _escolherTipoCarreta(tipo) {
   document.getElementById('carreta-tipo-overlay').classList.remove('open');
   vals.carreta = tipo;
+  vals.carretaPendente = false;
+  abrirRevisao();
+}
+
+function _definirCarretaPendente() {
+  document.getElementById('carreta-tipo-overlay').classList.remove('open');
+  vals.carreta = '';
+  vals.carretaPendente = true;
+  toast('Carreta pendente — será definida depois 🕓');
   abrirRevisao();
 }
 
