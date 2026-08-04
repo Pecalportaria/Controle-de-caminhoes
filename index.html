@@ -3194,11 +3194,30 @@ atualizarTurnoBar();
 // aparelho ou pressiona Esc — sem precisar mexer em cada botão "fechar".
 (function () {
   const SELETOR_OVERLAYS = '.modal-overlay, .painel-overlay';
-  let pilha = [{ tipo: 'tab', id: 'registrar' }]; // estado inicial: aba Registrar
-  let processandoPopstate = false; // true enquanto o próprio popstate está fechando algo
-  let ignorarProximoPopstate = false; // true quando somos nós que chamamos history.back() para sincronizar
 
-  function topo() { return pilha[pilha.length - 1]; }
+  // ── Log físico de navegação ─────────────────────────────────────────
+  // Em vez de tentar manter a pilha lógica em sincronia com a contagem
+  // exata de entradas do histórico do navegador (o que exigia chamar
+  // history.back() para "desfazer" pushes — uma operação ASSÍNCRONA que
+  // podia se cruzar com um pushState SÍNCRONO logo em seguida, ex: fechar
+  // um diálogo de confirmação e abrir na sequência um pedido de senha,
+  // no mesmo clique), este log só CRESCE (nunca removemos itens dele).
+  // Fechar algo programaticamente apenas marca o item como "fechado"
+  // (fantasma) — o nível físico correspondente do histórico é consumido
+  // silenciosamente (sem ação visual) na próxima vez que o usuário
+  // realmente apertar voltar/Esc. Isso elimina qualquer mistura de
+  // chamadas síncronas/assíncronas ao histórico.
+  let pilhaFisica = [];
+  let processandoPopstate = false;
+
+  function profundidadeAtual() { return pilhaFisica.length + 1; } // 1 = tela inicial
+
+  function itemAbertoTopo() {
+    for (let i = pilhaFisica.length - 1; i >= 0; i--) {
+      if (!pilhaFisica[i].fechado) return pilhaFisica[i];
+    }
+    return null; // nada aberto = estamos na tela inicial
+  }
 
   function aberto(el) { return el.classList.contains('open'); }
 
@@ -3206,23 +3225,21 @@ atualizarTurnoBar();
     document.querySelectorAll(SELETOR_OVERLAYS).forEach(function (el) {
       if (!el.id) return;
       new MutationObserver(function (muts) {
+        if (processandoPopstate) return; // essa mudança já foi originada pelo próprio popstate
         muts.forEach(function (m) {
           if (m.attributeName !== 'class') return;
           const estaAberto = aberto(el);
-          const idx = pilha.findIndex(function (e) { return e.tipo === 'overlay' && e.id === el.id; });
-          if (estaAberto && idx === -1) {
-            // Overlay foi aberto (por qualquer código) → registra na pilha/histórico
-            pilha.push({ tipo: 'overlay', id: el.id });
-            if (!processandoPopstate) {
-              history.pushState({ profundidade: pilha.length }, '');
-            }
-          } else if (!estaAberto && idx !== -1) {
-            // Overlay foi fechado (por botão "fechar", clique fora, etc.)
-            pilha.splice(idx, 1);
-            if (!processandoPopstate) {
-              // Consome a entrada de histórico correspondente para manter tudo sincronizado
-              ignorarProximoPopstate = true;
-              history.back();
+          if (estaAberto) {
+            const jaAberto = pilhaFisica.some(function (e) { return e.tipo === 'overlay' && e.id === el.id && !e.fechado; });
+            if (jaAberto) return;
+            pilhaFisica.push({ tipo: 'overlay', id: el.id, fechado: false });
+            history.pushState({ profundidade: profundidadeAtual() }, '');
+          } else {
+            for (let i = pilhaFisica.length - 1; i >= 0; i--) {
+              if (pilhaFisica[i].tipo === 'overlay' && pilhaFisica[i].id === el.id && !pilhaFisica[i].fechado) {
+                pilhaFisica[i].fechado = true;
+                break;
+              }
             }
           }
         });
@@ -3237,8 +3254,8 @@ atualizarTurnoBar();
 
   // Envolve showTab para registrar troca de abas no histórico de navegação.
   // Abas são "irmãs" (Registrar / Registros / Histórico) — sair da tela
-  // inicial empilha UM único nível de "fora do início"; alternar entre as
-  // outras abas não deve empilhar mais nada, para que baste UM toque em
+  // inicial empilha UM único nível "fora do início"; alternar entre as
+  // outras abas não empilha mais nada, para que baste UM toque em
   // voltar/Esc, de qualquer aba, para retornar direto à tela inicial.
   const _showTabOriginal = window.showTab;
   if (typeof _showTabOriginal === 'function') {
@@ -3249,78 +3266,69 @@ atualizarTurnoBar();
       if (!ficouAtiva) return; // acesso bloqueado — não mexe no histórico
       if (vindoDaNavegacao) return; // já sincronizado pelo popstate
 
-      const t0 = topo();
-      const estavaForaDoInicio = t0 && t0.tipo === 'tab' && t0.id !== 'registrar';
+      const topoAberto = itemAbertoTopo();
+      const estavaForaDoInicio = topoAberto && topoAberto.tipo === 'tab';
 
       if (t === 'registrar') {
-        // Voltou para a tela inicial por um clique normal na aba — remove o
-        // nível "fora do início" da pilha e do histórico do navegador.
-        if (estavaForaDoInicio) {
-          pilha.pop();
-          if (!processandoPopstate) {
-            ignorarProximoPopstate = true;
-            history.back();
-          }
-        }
+        // Voltou para a tela inicial por um clique normal na aba — marca o
+        // nível "fora do início" como fechado (fantasma); o nível físico
+        // correspondente é consumido em silêncio no próximo voltar real.
+        if (estavaForaDoInicio) topoAberto.fechado = true;
         return;
       }
 
       if (estavaForaDoInicio) {
-        // Já estava em Registros/Histórico — apenas troca qual aba será
-        // restaurada ao voltar, sem empilhar um novo nível.
-        t0.id = t;
-        if (!processandoPopstate) {
-          history.replaceState({ profundidade: pilha.length }, '');
-        }
+        // Já estava em Registros/Histórico — só troca qual aba deve ser
+        // restaurada ao voltar, sem empilhar (nem consumir) nenhum nível.
+        topoAberto.id = t;
       } else {
         // Primeira saída da tela inicial — empilha o único nível "fora do início".
-        pilha.push({ tipo: 'tab', id: t });
-        if (!processandoPopstate) {
-          history.pushState({ profundidade: pilha.length }, '');
-        }
+        pilhaFisica.push({ tipo: 'tab', id: t, fechado: false });
+        history.pushState({ profundidade: profundidadeAtual() }, '');
       }
     };
   }
 
   window.addEventListener('popstate', function (e) {
-    if (ignorarProximoPopstate) { ignorarProximoPopstate = false; return; }
     processandoPopstate = true;
     const profundidadeAlvo = (e.state && e.state.profundidade) || 1;
-    while (pilha.length > profundidadeAlvo) {
-      const item = pilha[pilha.length - 1];
+    while (profundidadeAtual() > profundidadeAlvo) {
+      const item = pilhaFisica.pop();
+
+      if (item.fechado) continue; // já tratado programaticamente — só consome o nível físico, sem ação visual
+
       if (item.tipo === 'overlay') {
         // Caso especial: o painel de registro (formulário de várias etapas)
         // não deve fechar de uma vez com o botão voltar — cada toque deve
         // voltar um passo do formulário, só fechando de fato no 1º passo.
         if (item.id === 'painel-overlay' && typeof stepAtual !== 'undefined' && stepAtual > 1 && typeof voltarStep === 'function') {
           voltarStep();
-          history.pushState({ profundidade: pilha.length }, '');
+          // O formulário continua aberto — repõe o nível físico consumido.
+          pilhaFisica.push(item);
+          history.pushState({ profundidade: profundidadeAtual() }, '');
           break;
         }
         const el = document.getElementById(item.id);
         if (el) el.classList.remove('open');
-        pilha.pop();
       } else if (item.tipo === 'tab') {
-        pilha.pop();
-        const anterior = topo();
-        if (anterior && anterior.tipo === 'tab') {
-          (window.showTab)(anterior.id, { _voltar: true });
+        const proximo = itemAbertoTopo();
+        if (proximo && proximo.tipo === 'tab') {
+          (window.showTab)(proximo.id, { _voltar: true });
+        } else {
+          (window.showTab)('registrar', { _voltar: true });
         }
-      } else {
-        pilha.pop();
       }
     }
 
     // Garantia extra: a tela inicial (Registrar) deve ser sempre a última
-    // exibida antes do app fechar. Se por algum motivo (ex: overlay aberto
-    // por um fluxo fora do padrão) a pilha já estiver na base mas a aba
-    // inicial não estiver visível, força a exibição dela e consome este
-    // "voltar" para reforçar o nível, deixando o fechamento apenas para o
+    // exibida antes do app fechar. Se por algum motivo a pilha já estiver
+    // na base mas a aba inicial não estiver visível, força a exibição dela
+    // e reforça o nível no histórico, deixando o fechamento apenas para o
     // próximo toque.
-    if (pilha.length <= 1) {
+    if (!itemAbertoTopo()) {
       const tabRegistrarAtiva = document.getElementById('tab-registrar')?.classList.contains('active');
       if (!tabRegistrarAtiva) {
-        pilha = [{ tipo: 'tab', id: 'registrar' }];
+        pilhaFisica = [];
         (window.showTab)('registrar', { _voltar: true });
         history.pushState({ profundidade: 1 }, '');
       }
