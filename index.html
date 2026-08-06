@@ -3219,6 +3219,23 @@ atualizarTurnoBar();
     return null; // nada aberto = estamos na tela inicial
   }
 
+  // Empilha um novo item — mas, se o nível físico do TOPO atual já estiver
+  // "fechado" (fantasma, sem nada de visível ali), REAPROVEITA esse mesmo
+  // nível (replaceState) em vez de criar um novo (pushState). Sem isso, uma
+  // sessão longa de uso (abrir/fechar telas repetidamente) faria o histórico
+  // físico crescer sem limite, exigindo dezenas de toques em voltar parado
+  // na tela inicial só para esvaziar fantasmas acumulados antes de fechar.
+  function empilhar(item) {
+    const topoFisico = pilhaFisica[pilhaFisica.length - 1];
+    if (topoFisico && topoFisico.fechado) {
+      pilhaFisica[pilhaFisica.length - 1] = item;
+      history.replaceState({ profundidade: profundidadeAtual() }, '');
+    } else {
+      pilhaFisica.push(item);
+      history.pushState({ profundidade: profundidadeAtual() }, '');
+    }
+  }
+
   function aberto(el) { return el.classList.contains('open'); }
 
   function observarOverlays() {
@@ -3232,8 +3249,7 @@ atualizarTurnoBar();
           if (estaAberto) {
             const jaAberto = pilhaFisica.some(function (e) { return e.tipo === 'overlay' && e.id === el.id && !e.fechado; });
             if (jaAberto) return;
-            pilhaFisica.push({ tipo: 'overlay', id: el.id, fechado: false });
-            history.pushState({ profundidade: profundidadeAtual() }, '');
+            empilhar({ tipo: 'overlay', id: el.id, fechado: false });
           } else {
             for (let i = pilhaFisica.length - 1; i >= 0; i--) {
               if (pilhaFisica[i].tipo === 'overlay' && pilhaFisica[i].id === el.id && !pilhaFisica[i].fechado) {
@@ -3283,8 +3299,7 @@ atualizarTurnoBar();
         topoAberto.id = t;
       } else {
         // Primeira saída da tela inicial — empilha o único nível "fora do início".
-        pilhaFisica.push({ tipo: 'tab', id: t, fechado: false });
-        history.pushState({ profundidade: profundidadeAtual() }, '');
+        empilhar({ tipo: 'tab', id: t, fechado: false });
       }
     };
   }
@@ -3292,10 +3307,14 @@ atualizarTurnoBar();
   window.addEventListener('popstate', function (e) {
     processandoPopstate = true;
     const profundidadeAlvo = (e.state && e.state.profundidade) || 1;
+    let algumaAcaoVisivel = false;
+    let formularioTratado = false;
     while (profundidadeAtual() > profundidadeAlvo) {
       const item = pilhaFisica.pop();
 
       if (item.fechado) continue; // já tratado programaticamente — só consome o nível físico, sem ação visual
+
+      algumaAcaoVisivel = true;
 
       if (item.tipo === 'overlay') {
         // Caso especial: o painel de registro (formulário de várias etapas)
@@ -3306,6 +3325,7 @@ atualizarTurnoBar();
           // O formulário continua aberto — repõe o nível físico consumido.
           pilhaFisica.push(item);
           history.pushState({ profundidade: profundidadeAtual() }, '');
+          formularioTratado = true;
           break;
         }
         const el = document.getElementById(item.id);
@@ -3330,11 +3350,23 @@ atualizarTurnoBar();
       if (!tabRegistrarAtiva) {
         pilhaFisica = [];
         (window.showTab)('registrar', { _voltar: true });
-        history.pushState({ profundidade: 1 }, '');
+        history.replaceState({ profundidade: 1 }, '');
+        algumaAcaoVisivel = true;
       }
     }
 
     processandoPopstate = false;
+
+    // Se este toque em voltar não produziu NENHUMA mudança visível (só
+    // consumiu níveis "fantasma" de telas já fechadas anteriormente, sem
+    // nunca ter chamado history.back() na hora) e ainda não chegamos à
+    // tela inicial, continua automaticamente. Assim, um ÚNICO toque do
+    // usuário atravessa qualquer quantidade de fantasmas acumulados de
+    // uma vez, em vez de exigir um toque para cada um — o app nunca fica
+    // "parado" precisando de vários cliques na tela inicial para fechar.
+    if (!formularioTratado && !algumaAcaoVisivel && profundidadeAtual() > 1) {
+      history.back();
+    }
   });
 
   // Marca o estado inicial no histórico
