@@ -3020,7 +3020,7 @@ function renderPatio() {
   }
 
   const total = patio.length;
-  if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' no pátio';
+  if (resumoEl) resumoEl.textContent = total + ' caminh' + (total !== 1 ? 'ões' : 'ão') + ' no pátio';
 
   el.innerHTML = patio.map(r => `
     <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#FDD835' : '#1565C030'};border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('patio', '${r.cavalo}')">
@@ -3124,7 +3124,7 @@ function renderRua() {
   }
 
   const total = rua.length;
-  if (resumoEl) resumoEl.textContent = total + ' caminhão' + (total !== 1 ? 'ões' : '') + ' na rua';
+  if (resumoEl) resumoEl.textContent = total + ' caminh' + (total !== 1 ? 'ões' : 'ão') + ' na rua';
 
   el.innerHTML = rua.map(r => `
     <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('rua', '${r.cavalo}')">
