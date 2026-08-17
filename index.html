@@ -466,7 +466,8 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
         </div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="e-sit-car" onclick="setEditSit('carregado')">Carregado</button><button class="sit-btn" id="e-sit-vaz" onclick="setEditSit('vazio')">Vazio</button></div></div>
-      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text;border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="e-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent;position:relative;z-index:2"></div></div>
+      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text;border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="e-destino" autocomplete="off" onkeydown="this.dataset.lastKey=event.key" oninput="this.value=this.value.toUpperCase();this.style.color='';this.dataset.sugestao='0';document.getElementById('e-destino-sugestao-hint').style.display='none';if(this.dataset.lastKey!=='Backspace'&&this.dataset.lastKey!=='Delete')autocompletarDestino(this);" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent;position:relative;z-index:2"></div></div>
+      <div id="e-destino-sugestao-hint" style="display:none;font-size:11px;color:#43A047;padding:0 14px 10px;letter-spacing:.04em">✦ Sugestão baseada no histórico deste cavalo — toque para editar</div>
     </div>
     <button class="btn-save" onclick="salvarEdicao()">Salvar alterações</button>
   </div>
@@ -492,7 +493,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
         </div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="r-sit-car" onclick="setRevisaoSit('carregado')">Carregado</button><button class="sit-btn" id="r-sit-vaz" onclick="setRevisaoSit('vazio')">Vazio</button></div></div>
-      <div class="form-row" style="border-bottom:none;position:relative"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="r-destino" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div><span id="r-destino-pendente-aviso" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🕓</span></div>
+      <div class="form-row" style="border-bottom:none;position:relative"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="r-destino" autocomplete="off" onkeydown="this.dataset.lastKey=event.key" oninput="this.value=this.value.toUpperCase();if(this.dataset.lastKey!=='Backspace'&&this.dataset.lastKey!=='Delete')autocompletarDestino(this);"></div><span id="r-destino-pendente-aviso" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🕓</span></div>
     </div>
     <button onclick="confirmarSalvar()" style="width:100%;padding:14px;background:#2E7D32;color:#fff;border:none;border-radius:var(--radius-lg);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.06em">Confirmar ✓</button>
   </div>
@@ -2125,14 +2126,22 @@ function _confirmarDelComSenha() {
   });
 }
 
-function editReg(id) {
+function editReg(id, campoFoco) {
   if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
   const t = getTurno();
   const p = getPorteiros().find(x => x.nome === t.nome);
   pedirSenha('Editar registro', 'Digite a senha de ' + t.nome + ' para editar', function(senha) {
     if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
-    _editRegInterno(id);
+    _editRegInterno(id, campoFoco);
   });
+}
+
+// Preencher Carreta/Destino pendente: assim como confirmar a Hora em Stand
+// By, só exige turno logado — sem pedir senha do porteiro (a senha só é
+// necessária para editar um registro já completo).
+function preencherPendente(id, campo) {
+  if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
+  _editRegInterno(id, campo);
 }
 
 // Duplo clique no motorista do histórico: exige turno + senha → abre edição na aba Registros
@@ -2147,7 +2156,22 @@ function abrirEdicaoDoHistorico(id) {
   });
 }
 
-function _editRegInterno(id) {
+// Sugere um destino para o cavalo com base no histórico de registros dele
+// (mesma lógica usada ao registrar: procura o destino usado mais recentemente
+// por esse cavalo, ignorando o próprio registro em edição).
+function sugerirDestinoHistorico(cavalo, excludeId) {
+  if (!cavalo) return null;
+  const candidatos = regs
+    .filter(r => r.cavalo === cavalo && r.destino && r.id !== excludeId)
+    .sort((a,b) => {
+      const da = a.data + (a.entrada||a.saida||'');
+      const db = b.data + (b.entrada||b.saida||'');
+      return da > db ? -1 : 1;
+    });
+  return candidatos.length ? candidatos[0].destino : null;
+}
+
+function _editRegInterno(id, campoFoco) {
   const r = regs.find(x => x.id === id);
   if (!r) return;
   editId = id;
@@ -2159,6 +2183,28 @@ function _editRegInterno(id) {
   document.getElementById('e-saida').value     = r.saida     || '';
   document.getElementById('e-destino').value   = r.destino   || '';
   setEditSit(r.situacao || 'carregado');
+  // Buscar no histórico do cavalo um destino sugerido — mesma lógica usada
+  // ao registrar. Só pré-preenche se o campo estiver vazio (destino
+  // pendente ou nunca informado), sem sobrescrever um valor já existente.
+  const eDestino = document.getElementById('e-destino');
+  const hintDestino = document.getElementById('e-destino-sugestao-hint');
+  if (!r.destino) {
+    const sugestao = sugerirDestinoHistorico(r.cavalo, r.id);
+    if (sugestao) {
+      eDestino.value = sugestao;
+      eDestino.dataset.sugestao = '1';
+      eDestino.style.color = '#43A047';
+      if (hintDestino) hintDestino.style.display = 'block';
+    } else {
+      eDestino.dataset.sugestao = '0';
+      eDestino.style.color = '';
+      if (hintDestino) hintDestino.style.display = 'none';
+    }
+  } else {
+    eDestino.dataset.sugestao = '0';
+    eDestino.style.color = '';
+    if (hintDestino) hintDestino.style.display = 'none';
+  }
   // Clonar campos de hora para remover listeners antigos
   ['e-entrada','e-saida'].forEach(id => {
     const el = document.getElementById(id);
@@ -2174,6 +2220,14 @@ function _editRegInterno(id) {
   const standbyAviso = document.getElementById('e-standby-aviso');
   standbyAviso.style.display = r.standBy ? 'inline-block' : 'none';
   document.getElementById('modal-overlay').classList.add('open');
+  // Se veio de um toque em "Pendente" (carreta ou destino), foca direto no
+  // campo correspondente para o usuário só digitar e salvar.
+  if (campoFoco === 'destino' || campoFoco === 'carreta') {
+    setTimeout(() => {
+      const campo = document.getElementById(campoFoco === 'destino' ? 'e-destino' : 'e-carreta');
+      if (campo) { campo.focus(); campo.select(); }
+    }, 250);
+  }
 }
 
 function fecharModal() {
@@ -2259,9 +2313,9 @@ function renderLista() {
           <div class="reg-cell-label">Cavalo</div>
           <div class="reg-cell-val" style="font-size:20px">${r.cavalo}</div>
         </div>
-        <div class="reg-cell" style="min-height:40px;cursor:pointer" onclick="abrirHistoricoCarreta('${(r.carreta||'').replace(/'/g,"\\'")}')">
+        <div class="reg-cell" style="min-height:40px;cursor:pointer" onclick="${r.carretaPendente ? `preencherPendente(${r.id},'carreta')` : `abrirHistoricoCarreta('${(r.carreta||'').replace(/'/g,"\\'")}')`}">
           <div class="reg-cell-label">Carreta</div>
-          <div class="reg-cell-val" style="font-size:${r.carretaPendente?'14px':'20px'};color:${r.carretaPendente?'#FFB74D':'#fff'}">${r.carretaPendente ? '🕓 Pendente' : (r.carreta||'—')}</div>
+          <div class="reg-cell-val" style="font-size:${r.carretaPendente?'14px':'20px'};color:${r.carretaPendente?'#FFB74D':'#fff'}">${r.carretaPendente ? '🕓 Pendente — toque para inserir' : (r.carreta||'—')}</div>
         </div>
 
         <!-- Linha 2: Motorista (mesclado) -->
@@ -2284,8 +2338,8 @@ function renderLista() {
         </div>
 
         <!-- Linha 4: Destino (mesclado) -->
-        <div class="reg-cell" style="grid-column:1/-1;min-height:40px">
-          <div class="reg-cell-val" style="font-size:${r.destinoPendente?'14px':'20px'};color:${r.destinoPendente?'#FFB74D':'#FFFFFF'}">${r.destinoPendente ? '🕓 Destino pendente' : (r.destino||'—')}</div>
+        <div class="reg-cell" style="grid-column:1/-1;min-height:40px${r.destinoPendente ? ';cursor:pointer' : ''}"${r.destinoPendente ? ` onclick="preencherPendente(${r.id},'destino')"` : ''}>
+          <div class="reg-cell-val" style="font-size:${r.destinoPendente?'14px':'20px'};color:${r.destinoPendente?'#FFB74D':'#FFFFFF'}">${r.destinoPendente ? '🕓 Destino pendente — toque para inserir' : (r.destino||'—')}</div>
         </div>
 
         <!-- Linha 5: Confirmar saída (só quando Stand By) -->
