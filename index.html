@@ -1712,6 +1712,7 @@ function abrirRevisao() {
     const clone = el.cloneNode(true);
     el.parentNode.replaceChild(clone, el);
     maskHora(document.getElementById(id));
+    document.getElementById(id).addEventListener('input', atualizarCorHoraRevisao);
   });
   // Stand By / Carreta pendente / Destino pendente são definidos lá nos
   // passos anteriores; aqui só refletimos o estado, sem checkbox.
@@ -1721,10 +1722,38 @@ function abrirRevisao() {
   document.getElementById('r-carreta').disabled = !!vals.carretaPendente;
   document.getElementById('r-destino-pendente-aviso').style.display = vals.destinoPendente ? 'inline-block' : 'none';
   document.getElementById('r-destino').disabled = !!vals.destinoPendente;
+  atualizarCorHoraRevisao();
   // Fechar painel (apenas visualmente — NÃO resetar vals aqui, senão perdemos
   // o estado de Stand By/pendentes antes do usuário confirmar na tela de revisão)
   document.getElementById('painel-overlay').classList.remove('open');
   document.getElementById('revisao-overlay').classList.add('open');
+}
+
+// Pinta a célula de Entrada ou Saída na tela de revisão com as mesmas cores
+// usadas na consulta de registros (verde = entrada, vermelho = saída,
+// laranja = stand by), para dar o mesmo retorno visual imediato.
+function atualizarCorHoraRevisao() {
+  const colEnt = document.getElementById('r-entrada').closest('.hora-col');
+  const colSai = document.getElementById('r-saida').closest('.hora-col');
+  if (!colEnt || !colSai) return;
+  const ent = document.getElementById('r-entrada').value.trim();
+  const sai = document.getElementById('r-saida').value.trim();
+
+  [colEnt, colSai].forEach(col => {
+    col.style.background = 'transparent';
+    col.style.borderRadius = '0';
+  });
+
+  if (vals.standBy) {
+    colSai.style.background = '#E6510030';
+    colSai.style.borderRadius = 'var(--radius)';
+  } else if (ent) {
+    colEnt.style.background = '#2E7D3230';
+    colEnt.style.borderRadius = 'var(--radius)';
+  } else if (sai) {
+    colSai.style.background = '#C6282830';
+    colSai.style.borderRadius = 'var(--radius)';
+  }
 }
 
 function fecharRevisao() {
