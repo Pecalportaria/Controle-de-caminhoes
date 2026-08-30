@@ -1741,17 +1741,21 @@ function atualizarCorHoraRevisao() {
 
   [colEnt, colSai].forEach(col => {
     col.style.background = 'transparent';
+    col.style.border = 'none';
     col.style.borderRadius = '0';
   });
 
   if (vals.standBy) {
-    colSai.style.background = '#E6510030';
+    colSai.style.background = '#E65100';
+    colSai.style.border = '2px solid #FF9800';
     colSai.style.borderRadius = 'var(--radius)';
   } else if (ent) {
-    colEnt.style.background = '#2E7D3230';
+    colEnt.style.background = '#2E7D32';
+    colEnt.style.border = '2px solid #43A047';
     colEnt.style.borderRadius = 'var(--radius)';
   } else if (sai) {
-    colSai.style.background = '#C6282830';
+    colSai.style.background = '#C62828';
+    colSai.style.border = '2px solid #E53935';
     colSai.style.borderRadius = 'var(--radius)';
   }
 }
