@@ -304,8 +304,8 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
 .hora-wrap{flex:1;display:grid;grid-template-columns:1fr 1fr}
 .hora-col{display:flex;flex-direction:column;border-right:1px solid #64B5F6}
 .hora-col:last-child{border-right:none}
-.hora-label{font-size:9px;font-weight:700;color:#546E7A;text-transform:uppercase;letter-spacing:.08em;padding:7px 14px 2px}
-.hora-col input{border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent;padding:2px 14px 10px;width:100%}
+.hora-label{font-size:9px;font-weight:700;color:#546E7A;text-transform:uppercase;letter-spacing:.08em;padding:7px 14px 2px;text-align:center}
+.hora-col input{border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent;padding:2px 14px 10px;width:100%;text-align:center}
 .hora-col input::placeholder{color:#546E7A}
 .sit-inline{display:flex;flex:1}
 .sit-btn{flex:1;padding:12px 0;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;color:#546E7A;transition:all .15s;font-family:'Barlow Condensed',sans-serif;border-right:1px solid #64B5F6;text-transform:uppercase;letter-spacing:.04em}
@@ -1736,27 +1736,27 @@ function atualizarCorHoraRevisao() {
   const colEnt = document.getElementById('r-entrada').closest('.hora-col');
   const colSai = document.getElementById('r-saida').closest('.hora-col');
   if (!colEnt || !colSai) return;
+  const labelEnt = colEnt.querySelector('.hora-label');
+  const labelSai = colSai.querySelector('.hora-label');
   const ent = document.getElementById('r-entrada').value.trim();
   const sai = document.getElementById('r-saida').value.trim();
 
-  [colEnt, colSai].forEach(col => {
+  [[colEnt, labelEnt], [colSai, labelSai]].forEach(([col, label]) => {
     col.style.background = 'transparent';
-    col.style.border = 'none';
-    col.style.borderRadius = '0';
+    label.style.color = '';
   });
 
+  function pintar(col, label, cor) {
+    col.style.background = cor;
+    label.style.color = 'rgba(255,255,255,.8)';
+  }
+
   if (vals.standBy) {
-    colSai.style.background = '#E65100';
-    colSai.style.border = '2px solid #FF9800';
-    colSai.style.borderRadius = 'var(--radius)';
+    pintar(colSai, labelSai, '#E65100');
   } else if (ent) {
-    colEnt.style.background = '#2E7D32';
-    colEnt.style.border = '2px solid #43A047';
-    colEnt.style.borderRadius = 'var(--radius)';
+    pintar(colEnt, labelEnt, '#2E7D32');
   } else if (sai) {
-    colSai.style.background = '#C62828';
-    colSai.style.border = '2px solid #E53935';
-    colSai.style.borderRadius = 'var(--radius)';
+    pintar(colSai, labelSai, '#C62828');
   }
 }
 
