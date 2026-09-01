@@ -2359,7 +2359,10 @@ function renderLista() {
     });
   const el = document.getElementById('lista');
   if (!list.length) {
-    el.innerHTML='<div class="empty"><div class="empty-icon">🚛</div><p>Nenhum registro encontrado</p></div>';
+    const msg = fd
+      ? 'Nenhum registro encontrado neste dia (' + fmtD(fd) + '). Selecione outro dia para ver os registros.'
+      : 'Nenhum registro encontrado';
+    el.innerHTML='<div class="empty"><div class="empty-icon">🚛</div><p>'+msg+'</p></div>';
     return;
   }
   el.innerHTML = list.map(r => {
