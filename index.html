@@ -1157,7 +1157,8 @@ function abrirLoginTurno() {
     return;
   }
   const sel = document.getElementById('login-porteiro');
-  sel.innerHTML = porteiros.map(p => '<option value="'+p.nome+'">'+p.nome+'</option>').join('');
+  sel.innerHTML = '<option value="" disabled selected>Porteiro</option>' +
+    porteiros.map(p => '<option value="'+p.nome+'">'+p.nome+'</option>').join('');
   document.getElementById('login-senha').value = '';
   document.getElementById('login-overlay').classList.add('open');
   setTimeout(() => document.getElementById('login-senha').focus(), 100);
@@ -1176,6 +1177,7 @@ async function confirmarLoginTurno() {
   }
   const nome = document.getElementById('login-porteiro').value;
   const senha = document.getElementById('login-senha').value;
+  if (!nome) { toast('Selecione o porteiro'); return; }
   const porteiros = getPorteiros();
   const p = porteiros.find(x => x.nome === nome);
   if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
@@ -3292,7 +3294,7 @@ function construirPassosTour() {
   }
 
   passos.push(
-    { target: 'tab-btn-registrar', titulo: 'Aba Registrar', texto: 'Essa é a tela inicial — é aqui que se registra a entrada ou a saída de um caminhão.', aoEntrar: () => showTab('registrar') },
+    { target: 'tab-btn-registrar', titulo: 'Aba Registrar', texto: 'Essa é a tela inicial — é aqui que se registra a entrada ou a saída de um caminhão. Só é possível registrar com um porteiro logado; sem login, o app fica somente para consulta.', aoEntrar: () => showTab('registrar') },
     { target: 'placa-click-area', titulo: 'Toque no caminhão', texto: 'Toque na imagem do caminhão pra abrir o formulário de registro. É só ir preenchendo um passo de cada vez: cavalo, motorista, horário, destino e carreta.' }
   );
 
@@ -3306,7 +3308,7 @@ function construirPassosTour() {
       { target: 'tab-btn-historico', titulo: 'Aba Histórico', texto: 'Aqui você busca registros antigos filtrando por cavalo, carreta, motorista, mês ou ano.', aoEntrar: () => { document.getElementById('config-overlay').classList.remove('open'); showTab('historico'); } }
     );
   } else {
-    passos.push({ target: 'tab-btn-lista', titulo: 'Abas Registros e Histórico', texto: 'Depois de liberar o acesso, essas abas mostram todos os registros, o Pátio, a Rua e o banco de placas.' });
+    passos.push({ target: ['tab-btn-lista', 'tab-btn-historico'], titulo: 'Abas Registros e Histórico', texto: 'Depois de liberar o acesso, essas abas mostram todos os registros, o Pátio, a Rua e o banco de placas.' });
   }
 
   passos.push({ target: 'tour-help-btn', titulo: 'Precisa rever isso depois?', texto: 'Toque aqui a qualquer momento pra abrir este tour de novo. Bom trabalho! 👍', aoEntrar: () => { document.getElementById('config-overlay').classList.remove('open'); showTab('registrar'); } });
@@ -3368,7 +3370,8 @@ function posicionarSpotlight(targetId) {
   const spot = document.getElementById('tour-spotlight');
   const card = document.getElementById('tour-card');
   const overlay = document.getElementById('tour-overlay');
-  const el = targetId ? document.getElementById(targetId) : null;
+  const ids = targetId ? (Array.isArray(targetId) ? targetId : [targetId]) : [];
+  const els = ids.map(id => document.getElementById(id)).filter(Boolean);
 
   function cartaoEmBaixo() {
     overlay.style.alignItems = 'flex-end';
@@ -3383,17 +3386,27 @@ function posicionarSpotlight(targetId) {
     card.style.borderBottom = '2px solid #42A5F5';
   }
 
-  if (!el) {
+  if (!els.length) {
     spot.style.opacity = '0';
     cartaoEmBaixo();
     return;
   }
-  el.scrollIntoView({ block: 'center', behavior: 'auto' });
+  els[0].scrollIntoView({ block: 'center', behavior: 'auto' });
   // Dá tempo do scroll/reflow assentar antes de medir a posição real — uma
   // única requestAnimationFrame às vezes captura a posição antiga, ainda
   // no meio da rolagem, e desalinha o destaque.
   setTimeout(() => {
-    const r = el.getBoundingClientRect();
+    // Une o retângulo de todos os elementos destacados neste passo (ex:
+    // as abas Registros + Histórico juntas), não só o do primeiro.
+    const rects = els.map(el => el.getBoundingClientRect());
+    const r = {
+      left: Math.min(...rects.map(x => x.left)),
+      top: Math.min(...rects.map(x => x.top)),
+      right: Math.max(...rects.map(x => x.right)),
+      bottom: Math.max(...rects.map(x => x.bottom))
+    };
+    r.width = r.right - r.left;
+    r.height = r.bottom - r.top;
     const pad = 8;
     spot.style.opacity = '1';
     spot.style.left = (r.left - pad) + 'px';
