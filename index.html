@@ -1093,18 +1093,15 @@ function abrirAjudaGenerica(titulo, corpoHTML) {
 
 function abrirAjudaPatio() {
   abrirAjudaGenerica('Pátio', '<ul style="margin:0;padding-left:18px">'
-    + '<li style="margin-bottom:8px">Essa lista é calculada <b>automaticamente</b> com base nos registros de entrada/saída — mostra todo cavalo cujo último movimento foi uma <b>entrada</b> (ainda sem saída registrada).</li>'
     + '<li style="margin-bottom:8px"><b>Toque em qualquer caminhão</b> da lista pra ver os detalhes: data e hora da entrada, motorista e destino.</li>'
-    + '<li style="margin-bottom:8px">Assim que uma <b>saída</b> for registrada pra esse cavalo, ele sai do Pátio automaticamente e passa pra Rua.</li>'
+    + '<li style="margin-bottom:8px"><b>Toque no status</b> (CARREGADO/VAZIO) de um caminhão pra alternar entre um e outro — útil pra corrigir ou atualizar a situação sem precisar editar o registro inteiro.</li>'
     + '<li>O botão <b>⚙️</b> serve pra fazer um <b>ajuste manual</b>, pra corrigir a lista à mão nos casos raros em que ela não bate com a realidade (ex: caminhão que entrou sem que o sistema tenha percebido). Use só quando for realmente necessário.</li>'
     + '</ul>');
 }
 
 function abrirAjudaRua() {
   abrirAjudaGenerica('Rua', '<ul style="margin:0;padding-left:18px">'
-    + '<li style="margin-bottom:8px">Essa lista é calculada <b>automaticamente</b> com base nos registros de entrada/saída — mostra todo cavalo cujo último movimento foi uma <b>saída</b> (ainda sem entrada de volta registrada).</li>'
-    + '<li style="margin-bottom:8px"><b>Toque em qualquer caminhão</b> da lista pra ver os detalhes: data e hora da saída, motorista e destino.</li>'
-    + '<li>Assim que uma <b>entrada</b> for registrada pra esse cavalo, ele sai da Rua automaticamente e passa pro Pátio.</li>'
+    + '<li><b>Toque em qualquer caminhão</b> da lista pra ver os detalhes: data e hora da saída, motorista e destino.</li>'
     + '</ul>');
 }
 
