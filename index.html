@@ -311,7 +311,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
 .hora-col{display:flex;flex-direction:column;border-right:1px solid #64B5F6}
 .hora-col:last-child{border-right:none}
 .hora-label{font-size:9px;font-weight:700;color:#546E7A;text-transform:uppercase;letter-spacing:.08em;padding:7px 14px 2px;text-align:center}
-.hora-col input{border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent;padding:2px 14px 10px;width:100%;text-align:center}
+.hora-col input{border:none;outline:none;font-family:'Barlow',sans-serif;font-size:18px;font-weight:600;color:#fff;background:transparent;padding:2px 14px 10px;width:100%;text-align:center}
 .hora-col input::placeholder{color:#546E7A}
 .sit-inline{display:flex;flex:1}
 .sit-btn{flex:1;padding:12px 0;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;color:#546E7A;transition:all .15s;font-family:'Barlow Condensed',sans-serif;border-right:1px solid #64B5F6;text-transform:uppercase;letter-spacing:.04em}
@@ -662,12 +662,25 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
   </div>
 </div>
 
+<!-- AJUDA GENÉRICA (reaproveitada em Pátio, Rua, etc.) -->
+<div class="modal-overlay" id="ajuda-generica-overlay" style="align-items:center;padding:0 20px;z-index:450">
+  <div style="background:#0D1F3C;border-radius:var(--radius-lg);width:100%;max-width:360px;max-height:80vh;overflow-y:auto;padding:22px 20px;border:1px solid #1565C060">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+      <div id="ajuda-generica-titulo" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#fff;letter-spacing:.02em"></div>
+      <button onclick="document.getElementById('ajuda-generica-overlay').classList.remove('open')" style="background:none;border:none;color:#546E7A;font-size:20px;cursor:pointer;padding:0 0 0 10px;line-height:1">✕</button>
+    </div>
+    <div id="ajuda-generica-corpo" style="font-size:13.5px;color:#B0BEC5;line-height:1.6"></div>
+    <button onclick="document.getElementById('ajuda-generica-overlay').classList.remove('open')" style="width:100%;margin-top:18px;padding:12px;background:#1565C0;color:#fff;border:none;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase">Entendi</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="patio-overlay">
   <div class="modal" style="padding-bottom:0;display:flex;flex-direction:column;max-height:85vh">
     <div style="flex-shrink:0">
       <div class="modal-title">
         <span>🏭 PÁTIO</span>
-        <div style="display:flex;gap:28px;align-items:center">
+        <div style="display:flex;gap:14px;align-items:center">
+          <button class="modal-close" onclick="abrirAjudaPatio()" title="Ajuda" style="font-size:16px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">?</button>
           <button class="modal-close" onclick="abrirAjustePatio()" title="Ajuste manual" style="font-size:18px;padding:6px">⚙️</button>
           <button class="modal-close" onclick="document.getElementById('patio-overlay').classList.remove('open')" style="padding:6px">✕</button>
         </div>
@@ -684,7 +697,10 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
     <div style="flex-shrink:0">
       <div class="modal-title">
         <span>🛣️ RUA</span>
-        <button class="modal-close" onclick="document.getElementById('rua-overlay').classList.remove('open')">✕</button>
+        <div style="display:flex;gap:14px;align-items:center">
+          <button class="modal-close" onclick="abrirAjudaRua()" title="Ajuda" style="font-size:16px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">?</button>
+          <button class="modal-close" onclick="document.getElementById('rua-overlay').classList.remove('open')" style="padding:6px">✕</button>
+        </div>
       </div>
       <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:12px" id="rua-resumo">Caminhões atualmente na rua</div>
     </div>
@@ -1043,6 +1059,30 @@ function abrirAjudaRegistro() {
   document.getElementById('ajuda-registro-titulo').textContent = '❓ ' + info.titulo;
   document.getElementById('ajuda-registro-corpo').innerHTML = info.corpo;
   document.getElementById('ajuda-registro-overlay').classList.add('open');
+}
+
+// Ajuda genérica reaproveitável (usada em Pátio, Rua, etc.)
+function abrirAjudaGenerica(titulo, corpoHTML) {
+  document.getElementById('ajuda-generica-titulo').textContent = '❓ ' + titulo;
+  document.getElementById('ajuda-generica-corpo').innerHTML = corpoHTML;
+  document.getElementById('ajuda-generica-overlay').classList.add('open');
+}
+
+function abrirAjudaPatio() {
+  abrirAjudaGenerica('Pátio', '<ul style="margin:0;padding-left:18px">'
+    + '<li style="margin-bottom:8px">Essa lista é calculada <b>automaticamente</b> com base nos registros de entrada/saída — mostra todo cavalo cujo último movimento foi uma <b>entrada</b> (ainda sem saída registrada).</li>'
+    + '<li style="margin-bottom:8px"><b>Toque em qualquer caminhão</b> da lista pra ver os detalhes: data e hora da entrada, motorista e destino.</li>'
+    + '<li style="margin-bottom:8px">Assim que uma <b>saída</b> for registrada pra esse cavalo, ele sai do Pátio automaticamente e passa pra Rua.</li>'
+    + '<li>O botão <b>⚙️</b> serve pra fazer um <b>ajuste manual</b>, pra corrigir a lista à mão nos casos raros em que ela não bate com a realidade (ex: caminhão que entrou sem que o sistema tenha percebido). Use só quando for realmente necessário.</li>'
+    + '</ul>');
+}
+
+function abrirAjudaRua() {
+  abrirAjudaGenerica('Rua', '<ul style="margin:0;padding-left:18px">'
+    + '<li style="margin-bottom:8px">Essa lista é calculada <b>automaticamente</b> com base nos registros de entrada/saída — mostra todo cavalo cujo último movimento foi uma <b>saída</b> (ainda sem entrada de volta registrada).</li>'
+    + '<li style="margin-bottom:8px"><b>Toque em qualquer caminhão</b> da lista pra ver os detalhes: data e hora da saída, motorista e destino.</li>'
+    + '<li>Assim que uma <b>entrada</b> for registrada pra esse cavalo, ele sai da Rua automaticamente e passa pro Pátio.</li>'
+    + '</ul>');
 }
 
 // ── Sistema de Turno / Login de Porteiros ─────────────
