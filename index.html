@@ -55,15 +55,21 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, or
     // Trava de somente-leitura: bloqueia qualquer gravação/exclusão quando o
     // dispositivo não é o porteiro logado, exceto o próprio doc de turno
     // (config/turno), que é como um porteiro real consegue logar/deslogar.
+    // Caminhos isentos da trava de somente-leitura: além do turno (login/logout),
+    // o cadastro de porteiros também precisa passar mesmo sem turno ativo neste
+    // aparelho — é a própria senha de gerenciamento (1057) que já protege essa
+    // ação, e é exatamente o fluxo usado para cadastrar o 1º porteiro (quando
+    // ainda não há ninguém logado para "destravar" a escrita).
+    const CAMINHOS_ISENTOS = ['config/turno', 'config/porteiros'];
     window._setDoc = (ref, ...args) => {
-      if (window._isReadOnly && window._isReadOnly() && ref.path !== 'config/turno') {
+      if (window._isReadOnly && window._isReadOnly() && !CAMINHOS_ISENTOS.includes(ref.path)) {
         if (window.toast) window.toast('Modo somente leitura — ação não permitida');
         return Promise.resolve();
       }
       return setDoc(ref, ...args);
     };
     window._deleteDoc = (ref, ...args) => {
-      if (window._isReadOnly && window._isReadOnly() && ref.path !== 'config/turno') {
+      if (window._isReadOnly && window._isReadOnly() && !CAMINHOS_ISENTOS.includes(ref.path)) {
         if (window.toast) window.toast('Modo somente leitura — ação não permitida');
         return Promise.resolve();
       }
