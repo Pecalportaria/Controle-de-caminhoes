@@ -622,37 +622,6 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
   </div>
 </div>
 
-<!-- MODAL CONSULTAR HISTÓRICO -->
-<!-- Busca pontual (getDocs), não fica "escutando" (onSnapshot) o ano inteiro:
-     roda só quando o usuário pede, traz apenas os documentos do intervalo de
-     datas escolhido, e não conta como leitura contínua no Firestore. -->
-<div class="modal-overlay" id="historico-overlay" style="z-index:410">
-  <div class="modal" style="padding-bottom:0;display:flex;flex-direction:column;max-height:85vh">
-    <div style="flex-shrink:0">
-      <div class="modal-title">
-        <span>🕘 Consultar Histórico</span>
-        <button class="modal-close" onclick="document.getElementById('historico-overlay').classList.remove('open')">✕</button>
-      </div>
-      <div style="font-size:12px;color:#546E7A;margin-bottom:14px">Busca pontual por período — não afeta o consumo de leituras do dia a dia.</div>
-
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <div style="flex:1">
-          <label style="font-size:11px;color:#546E7A;display:block;margin-bottom:4px">De</label>
-          <input type="date" id="historico-data-ini" style="width:100%;padding:10px;border:1px solid #1565C040;border-radius:var(--radius);background:#0D1F3C;color:#fff;outline:none;font-size:14px">
-        </div>
-        <div style="flex:1">
-          <label style="font-size:11px;color:#546E7A;display:block;margin-bottom:4px">Até</label>
-          <input type="date" id="historico-data-fim" style="width:100%;padding:10px;border:1px solid #1565C040;border-radius:var(--radius);background:#0D1F3C;color:#fff;outline:none;font-size:14px">
-        </div>
-      </div>
-      <button class="btn-salvar" style="width:100%;margin-bottom:14px" onclick="consultarHistorico()">Buscar</button>
-
-      <div style="font-size:11px;color:#546E7A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px" id="historico-resumo">Escolha um período e toque em Buscar</div>
-    </div>
-    <div id="historico-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
-  </div>
-</div>
-
 <!-- MODAL CONFIRMAÇÃO SIM/NÃO -->
 <div class="modal-overlay" id="confirmar-overlay" style="z-index:420">
   <div class="modal" style="max-width:320px;margin:0 auto">
@@ -685,7 +654,6 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
       <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
       <button class="btn-csv" id="btn-banco-placas" onclick="abrirBancoCavalos()" style="background:#6A1B9A20;border-color:#8E24AA40;color:#CE93D8;padding:14px;font-size:14px;text-align:center">🗄️ BANCO DE DADOS — PLACAS</button>
-      <button class="btn-csv" onclick="abrirHistorico()" style="background:#00695C20;border-color:#00897B40;color:#80CBC4;padding:14px;font-size:14px;text-align:center">🕘 CONSULTAR HISTÓRICO</button>
       <button class="btn-csv" onclick="abrirEncerrarTurnoRemoto()" style="background:#8B1A1A20;border-color:#C6282840;color:#EF9A9A;padding:14px;font-size:14px;text-align:center">🔒 ENCERRAR TURNO REMOTAMENTE</button>
     </div>
   </div>
@@ -901,6 +869,11 @@ let cavalosCadastrados = []; // banco de dados de placas de cavalo cadastradas
 let statusAtualPatio = []; // status atual (carregado/vazio) enquanto o caminhão está no pátio — NÃO altera o registro real de portaria
 let _fbIniciado = false;
 
+// Janela "ao vivo" (dias) mantida localmente pelo listener em tempo real.
+// Datas mais antigas que isso não ficam em `regs` — o filtro de data da tela
+// principal busca essas pontualmente no Firestore (ver buscarRegistrosDoDia).
+const LIMITE_DIAS_LISTENER_GLOBAL = 30;
+
 // Inicializar listener do Firestore quando Firebase estiver pronto
 function iniciarFirebase() {
   if (_fbIniciado || !window._fbReady) return;
@@ -908,14 +881,12 @@ function iniciarFirebase() {
   carregarPorteiros();
   carregarTurno();
 
-  // Listener em tempo real para registros — limitado aos últimos 60 dias.
+  // Listener em tempo real para registros — limitado aos últimos 30 dias.
   // Isso existe para reduzir leituras do Firestore: no dia a dia só interessa
-  // o que está em aberto/recente no pátio e na rua. Histórico mais antigo fica
-  // disponível sob demanda em "Consultar histórico" (busca pontual, não fica
-  // escutando o ano inteiro pra sempre — ver consultarHistorico()).
-  const LIMITE_DIAS_LISTENER = 30;
-  const dCorte = new Date(Date.now() - (LIMITE_DIAS_LISTENER * 24 * 60 * 60 * 1000));
-  const dataCorteListener = dCorte.getFullYear() + '-' + String(dCorte.getMonth()+1).padStart(2,'0') + '-' + String(dCorte.getDate()).padStart(2,'0'); // mesmo formato YYYY-MM-DD usado no campo 'data' dos registros (ver hoje())
+  // o que está em aberto/recente no pátio e na rua. Datas mais antigas são
+  // buscadas pontualmente quando o usuário seleciona esse dia no filtro
+  // (ver renderLista / buscarRegistrosDoDia).
+  const dataCorteListener = dataCorteLocal();
   const q = window._query(
     window._col('registros'),
     window._where('data', '>=', dataCorteListener),
@@ -2519,12 +2490,59 @@ document.getElementById('modal-overlay').addEventListener('mousedown', function(
   if (e.target === this) fecharModal();
 });
 
+// Data de corte usada tanto pelo listener em tempo real quanto pelo filtro da
+// tela principal, pra saber se uma data pedida está "ao vivo" (local, rápido)
+// ou é histórico antigo (precisa buscar pontualmente no Firestore).
+function dataCorteLocal() {
+  const d = new Date(Date.now() - (LIMITE_DIAS_LISTENER_GLOBAL * 24 * 60 * 60 * 1000));
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// Cache simples de buscas antigas já feitas nesta sessão, pra não repetir a
+// mesma leitura no Firestore se o usuário alternar entre datas.
+const _cacheHistoricoPorDia = {};
+
+async function buscarRegistrosDoDia(fd) {
+  if (_cacheHistoricoPorDia[fd]) return _cacheHistoricoPorDia[fd];
+  const qDia = window._query(
+    window._col('registros'),
+    window._where('data', '==', fd)
+  );
+  const snap = await window._getDocs(qDia);
+  const lista = snap.docs.map(d => { const data = d.data(); return { ...data, id: data.id || Number(d.id) }; });
+  _cacheHistoricoPorDia[fd] = lista;
+  return lista;
+}
+
 function renderLista() {
   // Atualizar pátio se estiver aberto
   if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
     if (document.getElementById('rua-overlay')?.classList.contains('open')) renderRua();
   const fd = g('filtro-data');
-  const list = (fd ? regs.filter(r=>r.data===fd) : regs)
+  const el = document.getElementById('lista');
+
+  // Data fora da janela "ao vivo" (mais antiga que os últimos 30 dias):
+  // busca pontualmente no Firestore em vez de filtrar o array local, já que
+  // esse array não contém mais o histórico inteiro.
+  if (fd && window._fbReady && fd < dataCorteLocal()) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🕘</div><p>Buscando registros de ' + fmtD(fd) + '...</p></div>';
+    buscarRegistrosDoDia(fd).then(lista => {
+      // Se o usuário já trocou a data enquanto a busca rodava, ignora o resultado.
+      if (g('filtro-data') !== fd) return;
+      renderListaComDados(lista, fd);
+    }).catch(err => {
+      console.error('Erro ao buscar registros antigos:', err);
+      el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Não foi possível buscar os registros de ' + fmtD(fd) + '. Tente novamente.</p></div>';
+    });
+    return;
+  }
+
+  const list = fd ? regs.filter(r=>r.data===fd) : regs;
+  renderListaComDados(list, fd);
+}
+
+function renderListaComDados(listaOriginal, fd) {
+  const list = listaOriginal
     .slice().sort((a,b) => {
       const da=a.data+(a.entrada||a.saida||'');
       const db=b.data+(b.entrada||b.saida||'');
@@ -2606,9 +2624,14 @@ function renderLista() {
   });
 }
 
-function exportCSV() {
+async function exportCSV() {
   const fd = g('filtro-data');
-  const dados = fd ? regs.filter(r=>r.data===fd) : regs;
+  let dados;
+  if (fd && window._fbReady && fd < dataCorteLocal()) {
+    dados = await buscarRegistrosDoDia(fd);
+  } else {
+    dados = fd ? regs.filter(r=>r.data===fd) : regs;
+  }
   if (!dados.length) { toast('Nenhum dado'); return; }
   const h = 'Cavalo,Carreta,Motorista,Data,Entrada,Saída,Situação,Destino\n';
   const rows = dados.map(r=>`"${r.cavalo}","${r.carreta||''}","${r.motorista}","${fmtD(r.data)}","${r.entrada||''}","${r.saida||''}","${r.situacao}","${r.destino||''}"`).join('\n');
@@ -2634,7 +2657,39 @@ function initHistoricoFiltros() {
     meses.map((m,i) => '<option value="'+String(i+1).padStart(2,'0')+'"'+(i===mesAtual?' selected':'')+'>'+m+'</option>').join('');
 }
 
-function renderHistorico() {
+// Cache de buscas do histórico por período (ano ou ano-mês), pra não repetir
+// a mesma leitura no Firestore ao alternar entre nome/placa com o mesmo período.
+const _cacheHistoricoPorPeriodo = {};
+
+function limitesDoPeriodo(ano, mes) {
+  if (mes) {
+    const ini = ano + '-' + mes + '-01';
+    let proxMes = String(Number(mes)+1).padStart(2,'0');
+    let proxAno = ano;
+    if (proxMes === '13') { proxMes = '01'; proxAno = String(Number(ano)+1); }
+    const fimExclusivo = proxAno + '-' + proxMes + '-01';
+    return { ini, fimExclusivo };
+  }
+  return { ini: ano + '-01-01', fimExclusivo: (Number(ano)+1) + '-01-01' };
+}
+
+async function buscarRegistrosPorPeriodo(ano, mes) {
+  const prefixo = mes ? ano + '-' + mes : ano;
+  if (_cacheHistoricoPorPeriodo[prefixo]) return _cacheHistoricoPorPeriodo[prefixo];
+  const { ini, fimExclusivo } = limitesDoPeriodo(ano, mes);
+  const qPeriodo = window._query(
+    window._col('registros'),
+    window._where('data', '>=', ini),
+    window._where('data', '<', fimExclusivo),
+    window._orderBy('data')
+  );
+  const snap = await window._getDocs(qPeriodo);
+  const lista = snap.docs.map(d => { const data = d.data(); return { ...data, id: data.id || Number(d.id) }; });
+  _cacheHistoricoPorPeriodo[prefixo] = lista;
+  return lista;
+}
+
+async function renderHistorico() {
   const cavalo   = (document.getElementById('hist-cavalo')?.value||'').trim().toUpperCase();
   const motorista= (document.getElementById('hist-motorista')?.value||'').trim().toUpperCase();
   const carreta  = (document.getElementById('hist-carreta')?.value||'').trim().toUpperCase();
@@ -2648,8 +2703,34 @@ function renderHistorico() {
     return;
   }
 
+  // Se o período pedido tiver alguma data fora da janela "ao vivo" (30 dias),
+  // busca no Firestore em vez de usar só o array local (que não guarda mais
+  // o histórico inteiro). Período totalmente dentro da janela usa o local,
+  // rápido e sem gasto extra.
+  const { ini } = limitesDoPeriodo(ano, mes);
+  let fonte;
+  if (window._fbReady && ini < dataCorteLocal()) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🕘</div><p>Buscando histórico...</p></div>';
+    try {
+      fonte = await buscarRegistrosPorPeriodo(ano, mes);
+    } catch (err) {
+      console.error('Erro ao buscar histórico:', err);
+      el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Não foi possível buscar o histórico agora. Tente novamente.</p></div>';
+      return;
+    }
+    // Se os campos de busca mudaram enquanto buscava, ignora o resultado.
+    const aindaValido = (document.getElementById('hist-cavalo')?.value||'').trim().toUpperCase() === cavalo
+      && (document.getElementById('hist-motorista')?.value||'').trim().toUpperCase() === motorista
+      && (document.getElementById('hist-carreta')?.value||'').trim().toUpperCase() === carreta
+      && (document.getElementById('hist-mes')?.value||'') === mes
+      && (document.getElementById('hist-ano')?.value||'') === ano;
+    if (!aindaValido) return;
+  } else {
+    fonte = regs;
+  }
+
   const prefixo = mes ? ano + '-' + mes : ano;
-  const lista = regs
+  const lista = fonte
     .filter(r => {
       const matchCavalo   = !cavalo   || (r.cavalo   && r.cavalo.toUpperCase().includes(cavalo));
       const matchMotorista= !motorista|| (r.motorista&& r.motorista.toUpperCase().includes(motorista));
@@ -3156,100 +3237,6 @@ function excluirPlacaBanco(cavalo) {
 function fecharBancoEConfig() {
   document.getElementById('banco-overlay').classList.remove('open');
   document.getElementById('config-overlay').classList.remove('open');
-}
-
-// ===== CONSULTAR HISTÓRICO (busca pontual, fora do listener em tempo real) =====
-// Usa getDocs (busca única) em vez de onSnapshot (escuta contínua), então não
-// soma leituras extras no dia a dia — só conta quando o usuário efetivamente
-// pede uma consulta, e só traz os documentos do intervalo escolhido.
-function abrirHistorico() {
-  document.getElementById('config-overlay').classList.remove('open');
-  document.getElementById('historico-data-ini').value = '';
-  document.getElementById('historico-data-fim').value = '';
-  document.getElementById('historico-resumo').textContent = 'Escolha um período e toque em Buscar';
-  document.getElementById('historico-lista').innerHTML = '';
-  document.getElementById('historico-overlay').classList.add('open');
-}
-
-async function consultarHistorico() {
-  const ini = g('historico-data-ini');
-  const fim = g('historico-data-fim');
-  const resumoEl = document.getElementById('historico-resumo');
-  const listaEl = document.getElementById('historico-lista');
-
-  if (!ini || !fim) {
-    toast('Selecione as duas datas (de / até)');
-    return;
-  }
-  if (!window._fbReady) {
-    toast('Sem conexão com o Firebase no momento');
-    return;
-  }
-
-  resumoEl.textContent = 'Buscando...';
-  listaEl.innerHTML = '';
-
-  try {
-    const qHist = window._query(
-      window._col('registros'),
-      window._where('data', '>=', ini),
-      window._where('data', '<=', fim),
-      window._orderBy('data','desc')
-    );
-    const snap = await window._getDocs(qHist);
-    const lista = snap.docs.map(d => { const data = d.data(); return { ...data, id: data.id || Number(d.id) }; })
-      .sort((a,b) => {
-        const da=a.data+(a.entrada||a.saida||'');
-        const db=b.data+(b.entrada||b.saida||'');
-        return da<db?1:da>db?-1:0;
-      });
-
-    if (!lista.length) {
-      resumoEl.textContent = 'Nenhum registro encontrado no período';
-      listaEl.innerHTML = '<div class="empty"><div class="empty-icon">🕘</div><p>Nenhum registro encontrado entre ' + fmtD(ini) + ' e ' + fmtD(fim) + '</p></div>';
-      return;
-    }
-
-    resumoEl.textContent = lista.length + ' registro(s) encontrado(s) — ' + fmtD(ini) + ' a ' + fmtD(fim);
-    listaEl.innerHTML = lista.map(r => {
-      const temEntrada = r.entrada ? true : false;
-      const horarioMovimento = r.standBy ? 'STAND BY' : (r.entrada || r.saida || '—');
-      const labelMovimento = r.standBy ? '🕓 Stand By' : (temEntrada ? 'Entrada' : 'Saída');
-      const situacao = r.situacao === 'carregado' ? 'Carregado' : 'Vazio';
-      return `
-      <div class="reg-card">
-        <div class="reg-grid">
-          <div class="reg-cell" style="min-height:36px">
-            <div class="reg-cell-label">Cavalo</div>
-            <div class="reg-cell-val" style="font-size:18px">${r.cavalo||'—'}</div>
-          </div>
-          <div class="reg-cell" style="min-height:36px">
-            <div class="reg-cell-label">Carreta</div>
-            <div class="reg-cell-val" style="font-size:18px">${r.carreta||'—'}</div>
-          </div>
-          <div class="reg-cell" style="grid-column:1/-1;min-height:36px">
-            <div class="reg-cell-val" style="font-size:18px">${r.motorista||'—'}</div>
-          </div>
-          <div class="reg-cell" style="min-height:30px;padding:4px 8px">
-            <div class="reg-cell-label" style="font-size:13px">${fmtD(r.data)} — ${labelMovimento}</div>
-            <div class="reg-cell-val" style="font-size:16px">${horarioMovimento}</div>
-          </div>
-          <div class="reg-cell" style="min-height:30px;padding:4px 8px">
-            <div class="reg-cell-label" style="font-size:13px">Situação</div>
-            <div class="reg-cell-val" style="font-size:16px">${situacao}</div>
-          </div>
-          <div class="reg-cell" style="grid-column:1/-1;min-height:30px">
-            <div class="reg-cell-label" style="font-size:13px">Destino</div>
-            <div class="reg-cell-val" style="font-size:15px">${r.destino||'—'}</div>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  } catch (err) {
-    console.error('Erro ao consultar histórico:', err);
-    resumoEl.textContent = 'Erro ao buscar histórico';
-    listaEl.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Não foi possível buscar o histórico agora. Tente novamente.</p></div>';
-  }
 }
 
 function abrirBancoCavalos() {
