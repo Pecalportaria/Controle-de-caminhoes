@@ -418,8 +418,8 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
         <span style="font-size:10px;color:#546E7A;font-weight:600;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em">Cavalo</span>
         <input type="text" id="hist-cavalo" placeholder="Ex: 1D71"
           maxlength="4" inputmode="text" autocomplete="off"
-          onfocus="this.value='';document.getElementById('hist-motorista').value='';document.getElementById('hist-carreta').value='';renderHistorico()"
-          oninput="this.value=this.value.toUpperCase();document.getElementById('hist-motorista').value='';document.getElementById('hist-carreta').value='';renderHistorico()"
+          onfocus="_historicoModoExato=null;this.value='';document.getElementById('hist-motorista').value='';document.getElementById('hist-carreta').value='';renderHistorico()"
+          oninput="_historicoModoExato=null;this.value=this.value.toUpperCase();document.getElementById('hist-motorista').value='';document.getElementById('hist-carreta').value='';renderHistorico()"
           onkeydown="if(event.key==='Enter'){event.preventDefault();renderHistorico();this.blur()}"
           style="width:80px;padding:7px 10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:15px;background:#0D1F3C;color:#fff;outline:none;letter-spacing:.08em;font-weight:700;text-transform:uppercase">
       </div>
@@ -427,8 +427,8 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
         <span style="font-size:10px;color:#546E7A;font-weight:600;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em">Carreta</span>
         <input type="text" id="hist-carreta" placeholder="Ex: ABC1234"
           maxlength="7" inputmode="text" autocomplete="off"
-          onfocus="this.value='';document.getElementById('hist-cavalo').value='';document.getElementById('hist-motorista').value='';renderHistorico()"
-          oninput="this.value=this.value.toUpperCase();document.getElementById('hist-cavalo').value='';document.getElementById('hist-motorista').value='';renderHistorico()"
+          onfocus="_historicoModoExato=null;this.value='';document.getElementById('hist-cavalo').value='';document.getElementById('hist-motorista').value='';renderHistorico()"
+          oninput="_historicoModoExato=null;this.value=this.value.toUpperCase();document.getElementById('hist-cavalo').value='';document.getElementById('hist-motorista').value='';renderHistorico()"
           onkeydown="if(event.key==='Enter'){event.preventDefault();renderHistorico();this.blur()}"
           style="width:100px;padding:7px 10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:15px;background:#0D1F3C;color:#fff;outline:none;letter-spacing:.08em;font-weight:700;text-transform:uppercase">
       </div>
@@ -437,7 +437,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
       <span style="font-size:10px;color:#546E7A;font-weight:600;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em">Motorista</span>
       <input type="text" id="hist-motorista" placeholder="Nome do motorista"
         autocomplete="off"
-        onfocus="this.value='';document.getElementById('hist-cavalo').value='';document.getElementById('hist-carreta').value='';renderHistorico()"
+        onfocus="_historicoModoExato=null;this.value='';document.getElementById('hist-cavalo').value='';document.getElementById('hist-carreta').value='';renderHistorico()"
         onkeydown="this._ultimaTecla=event.key"
         oninput="autocompletarMotoristaHist(this)"
         style="flex:1;padding:7px 10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:13px;background:#0D1F3C;color:#fff;outline:none">
@@ -1477,6 +1477,7 @@ function semAcento(str) {
 // ── Autocompletar motorista no histórico ─────────────
 // ── Limpar campo motorista do histórico via botão X ──
 function autocompletarMotoristaHist(inp) {
+  _historicoModoExato = null;
   inp.value = inp.value.toUpperCase();
   document.getElementById('hist-cavalo').value = '';
   const digitado = inp.value;
@@ -2276,42 +2277,70 @@ function showTab(t) {
 }
 
 // Abrir histórico filtrado por motorista (duplo clique na célula 1)
+// ===== Busca exata por campo (cavalo/motorista/carreta) =====
+// Usada pelos cliques em card (valor exato já conhecido, não texto parcial).
+// Consulta o Firestore por igualdade (where campo == valor) UMA VEZ e guarda
+// em cache — bem mais barato que baixar o ano inteiro, porque só traz os
+// documentos daquele cavalo/motorista/carreta específico. Trocar de mês/ano
+// depois (nos próprios seletores da tela) reaproveita esse cache, sem nova
+// consulta ao Firestore.
+const _cacheHistoricoPorCampo = {};
+let _historicoModoExato = null; // { campo, valor } quando ativo (clique em card)
+
+async function buscarHistoricoPorCampoExato(campo, valor) {
+  const chave = campo + ':' + valor;
+  if (_cacheHistoricoPorCampo[chave]) return _cacheHistoricoPorCampo[chave];
+  const qExato = window._query(window._col('registros'), window._where(campo, '==', valor));
+  const snap = await window._getDocs(qExato);
+  const lista = snap.docs.map(d => { const data = d.data(); return { ...data, id: data.id || Number(d.id) }; });
+  _cacheHistoricoPorCampo[chave] = lista;
+  return lista;
+}
+
+function _modoExatoValido() {
+  if (!_historicoModoExato) return false;
+  const { campo, valor } = _historicoModoExato;
+  const mapa = { cavalo: 'hist-cavalo', motorista: 'hist-motorista', carreta: 'hist-carreta' };
+  const campoAtivo = (document.getElementById(mapa[campo])?.value || '').trim().toUpperCase();
+  if (campoAtivo !== valor) return false;
+  for (const [c, id] of Object.entries(mapa)) {
+    if (c === campo) continue;
+    if ((document.getElementById(id)?.value || '').trim()) return false;
+  }
+  return true;
+}
+
+// Abrir histórico a partir de um clique em card (cavalo/motorista/carreta) —
+// por padrão mostra só o MÊS ATUAL; o usuário pode trocar mês/ano ou escolher
+// "Todo o ano" nos próprios seletores da tela pra ver mais, sem custo extra
+// de leitura (reaproveita a mesma busca exata já feita).
+function abrirHistoricoExato(campo, valor, idCampoInput) {
+  showTab('historico');
+  setTimeout(() => {
+    ['hist-cavalo','hist-motorista','hist-carreta'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById(idCampoInput).value = valor;
+    _historicoModoExato = { campo, valor };
+    const hoje = new Date();
+    const selMes = document.getElementById('hist-mes');
+    const selAno = document.getElementById('hist-ano');
+    if (selMes) selMes.value = String(hoje.getMonth()+1).padStart(2,'0');
+    if (selAno) selAno.value = String(hoje.getFullYear());
+    renderHistorico();
+  }, 50);
+}
+
 function abrirHistoricoMotorista(motorista) {
-  showTab('historico');
-  setTimeout(() => {
-    document.getElementById('hist-motorista').value = motorista;
-    document.getElementById('hist-cavalo').value = '';
-    document.getElementById('hist-carreta').value = '';
-    const selMes = document.getElementById('hist-mes');
-    if (selMes) selMes.value = '';
-    renderHistorico();
-  }, 50);
+  abrirHistoricoExato('motorista', motorista, 'hist-motorista');
 }
 
-// Abrir histórico filtrado por cavalo (clique na célula do cavalo) — mostra o ano todo
+// Abrir histórico filtrado por cavalo (clique na célula do cavalo)
 function abrirHistoricoCavalo(cavalo) {
-  showTab('historico');
-  setTimeout(() => {
-    document.getElementById('hist-cavalo').value = cavalo;
-    document.getElementById('hist-motorista').value = '';
-    document.getElementById('hist-carreta').value = '';
-    const selMes = document.getElementById('hist-mes');
-    if (selMes) selMes.value = '';
-    renderHistorico();
-  }, 50);
+  abrirHistoricoExato('cavalo', cavalo, 'hist-cavalo');
 }
 
-// Abrir histórico filtrado por carreta (clique na célula da carreta) — mostra o ano todo
+// Abrir histórico filtrado por carreta (clique na célula da carreta)
 function abrirHistoricoCarreta(carreta) {
-  showTab('historico');
-  setTimeout(() => {
-    document.getElementById('hist-carreta').value = carreta;
-    document.getElementById('hist-cavalo').value = '';
-    document.getElementById('hist-motorista').value = '';
-    const selMes = document.getElementById('hist-mes');
-    if (selMes) selMes.value = '';
-    renderHistorico();
-  }, 50);
+  abrirHistoricoExato('carreta', carreta, 'hist-carreta');
 }
 
 let _delId = null;
@@ -2622,11 +2651,28 @@ function renderListaComDados(listaOriginal, fd) {
   });
 }
 
+// Busca a coleção 'registros' inteira — usada só em ações raras e explícitas
+// (Backup completo, Exportar CSV sem filtro de data), nunca automaticamente.
+// Cacheada na sessão pra não repetir se o usuário fizer backup e depois CSV.
+let _cacheRegistrosCompleto = null;
+async function buscarTodosOsRegistros() {
+  if (_cacheRegistrosCompleto) return _cacheRegistrosCompleto;
+  const qTudo = window._query(window._col('registros'), window._orderBy('data','desc'));
+  const snap = await window._getDocs(qTudo);
+  const lista = snap.docs.map(d => { const data = d.data(); return { ...data, id: data.id || Number(d.id) }; });
+  _cacheRegistrosCompleto = lista;
+  return lista;
+}
+
 async function exportCSV() {
   const fd = g('filtro-data');
   let dados;
   if (fd && window._fbReady && fd < dataCorteLocal()) {
     dados = await buscarRegistrosDoDia(fd);
+  } else if (!fd && window._fbReady) {
+    // "Todos" — regs local só tem os últimos 30 dias; busca a coleção completa.
+    toast('Buscando todos os registros...');
+    dados = await buscarTodosOsRegistros();
   } else {
     dados = fd ? regs.filter(r=>r.data===fd) : regs;
   }
@@ -2701,6 +2747,35 @@ async function renderHistorico() {
     return;
   }
 
+  // Modo exato (veio de um clique em card): reaproveita a busca por igualdade
+  // já feita/cacheada pra esse cavalo/motorista/carreta específico, e só
+  // filtra por mês/ano no cliente — sem nova consulta ao Firestore ao trocar
+  // o período nos seletores.
+  if (_modoExatoValido()) {
+    const { campo, valor } = _historicoModoExato;
+    if (window._fbReady) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">🕘</div><p>Buscando histórico...</p></div>';
+      let listaCompleta;
+      try {
+        listaCompleta = await buscarHistoricoPorCampoExato(campo, valor);
+      } catch (err) {
+        console.error('Erro ao buscar histórico exato:', err);
+        el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Não foi possível buscar o histórico agora. Tente novamente.</p></div>';
+        return;
+      }
+      if (!_modoExatoValido()) return; // campos mudaram enquanto buscava
+      const prefixo = mes ? ano + '-' + mes : ano;
+      const lista = listaCompleta.filter(r => r.data && r.data.startsWith(prefixo));
+      if (!lista.length) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>Nenhum registro encontrado</p></div>';
+        return;
+      }
+      renderHistoricoLista(lista, el);
+      return;
+    }
+    // Sem Firebase disponível: cai pro filtro local normal abaixo.
+  }
+
   // Se o período pedido tiver alguma data fora da janela "ao vivo" (30 dias),
   // busca no Firestore em vez de usar só o array local (que não guarda mais
   // o histórico inteiro). Período totalmente dentro da janela usa o local,
@@ -2747,6 +2822,12 @@ async function renderHistorico() {
     return;
   }
 
+  renderHistoricoLista(lista, el);
+}
+
+// Desenha a lista de histórico já filtrada, agrupada por cavalo — reaproveitada
+// tanto pela busca manual (mês/ano) quanto pela busca exata via clique num card.
+function renderHistoricoLista(lista, el) {
   // Agrupar por cavalo
   const grupos = {};
   lista.forEach(r => {
@@ -2846,14 +2927,25 @@ function solicitarSenhaBackup() {
   });
 }
 
-function fazerBackup() {
-  if (!regs.length) { toast('Nenhum registro para fazer backup'); return; }
+async function fazerBackup() {
+  let dados = regs;
+  if (window._fbReady) {
+    toast('Buscando todos os registros...');
+    try {
+      dados = await buscarTodosOsRegistros();
+    } catch (err) {
+      console.error('Erro ao buscar registros completos para backup:', err);
+      toast('Erro ao buscar histórico completo — backup usará só os dados locais');
+      dados = regs;
+    }
+  }
+  if (!dados.length) { toast('Nenhum registro para fazer backup'); return; }
   try {
     const backup = {
       versao: '1.0',
       data: new Date().toISOString(),
-      total: regs.length,
-      registros: regs
+      total: dados.length,
+      registros: dados
     };
     const json = JSON.stringify(backup, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
@@ -2868,8 +2960,8 @@ function fazerBackup() {
     a.href = URL.createObjectURL(blob);
     a.download = nome;
     a.click();
-    toast('Backup salvo: ' + regs.length + ' registros');
-    mostrarSucessoBackup(regs.length, nome);
+    toast('Backup salvo: ' + dados.length + ' registros');
+    mostrarSucessoBackup(dados.length, nome);
   } catch(e) {
     console.error('Erro ao fazer backup:', e);
     mostrarErroBackup();
