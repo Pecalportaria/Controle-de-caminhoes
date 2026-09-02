@@ -1217,7 +1217,7 @@ function atualizarTurnoBar() {
 // ── Acesso de visitante (somente leitura) ───────────────
 // Regras:
 //  - Porteiro logado NESTE dispositivo (euEstouLogado) = acesso total, sem restrição.
-//  - Sem login de porteiro: só libera navegação (leitura) com a senha "codepecal",
+//  - Sem login de porteiro: só libera navegação (leitura) com a senha "pecal",
 //    guardada neste dispositivo/navegador. Sem ela, nada no app fica acessível.
 //  - Toda escrita no banco passa por isReadOnly() como trava final, então mesmo
 //    que algum botão de edição escape da checagem visual, a gravação é bloqueada.
@@ -1236,7 +1236,7 @@ const EYE_CLOSED = '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7
 function confirmarSenhaLeitura() {
   const campo = document.getElementById('ar-senha');
   const senha = campo ? campo.value : '';
-  if (senha !== 'codepecal') {
+  if (senha !== 'pecal') {
     toast('Senha incorreta!');
     if (campo) { campo.value = ''; campo.type = 'password'; }
     const btn = document.getElementById('ar-eye-btn');
