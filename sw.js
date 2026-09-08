@@ -12,7 +12,7 @@
 // Se quiser forçar todos os aparelhos a buscar uma versão nova do app da
 // próxima vez (ex: depois de uma atualização importante), basta mudar o
 // número da versão abaixo (v1 → v2, etc.).
-const CACHE_NAME = 'transpecal-cache-v2';
+const CACHE_NAME = 'transpecal-cache-v3';
 
 // Arquivos essenciais para o app abrir (o resto — fontes, Firebase — vai
 // sendo guardado automaticamente conforme é usado, na função fetch abaixo).
@@ -72,13 +72,32 @@ self.addEventListener('fetch', (event) => {
   // cache serve só como "plano B" para quando não houver conexão.
   if (ehConteudoQueDeveSerSempreAtual(req)) {
     event.respondWith(
-      fetch(req)
-        .then((res) => {
+      (async () => {
+        // Uma única busca na rede — usada tanto pra responder rápido quanto
+        // pra atualizar o cache, sem duplicar a requisição.
+        const buscaRede = fetch(req).then((res) => {
           const copia = res.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, copia)).catch(() => {});
           return res;
-        })
-        .catch(() => caches.match(req).then((c) => c || caches.match('./index.html')))
+        }).catch(() => null);
+
+        // Dá até 4 segundos pra rede responder. Se não responder nesse
+        // tempo (conexão ruim/instável), usa o cache na hora em vez de
+        // deixar a tela travada esperando — a busca continua rodando por
+        // trás pra atualizar o cache quando (se) terminar.
+        const espera4s = new Promise((resolve) => setTimeout(() => resolve(undefined), 4000));
+        const primeiro = await Promise.race([buscaRede, espera4s]);
+
+        if (primeiro) return primeiro; // rede respondeu a tempo
+
+        const cacheado = await caches.match(req);
+        if (cacheado) return cacheado;
+
+        // Sem cache ainda (ex: primeiríssima abertura): só resta esperar a
+        // rede terminar, mesmo que demore.
+        const resultadoFinal = await buscaRede;
+        return resultadoFinal || caches.match('./index.html');
+      })()
     );
     return;
   }
