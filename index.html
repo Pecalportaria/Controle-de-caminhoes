@@ -866,6 +866,8 @@ let _patioAtual = []; // última lista renderizada do Pátio (para o popup de de
 let _ruaAtual = []; // última lista renderizada da Rua (para o popup de detalhe)
 let ajustesPatio = []; // ajustes manuais de inclusão/retirada do pátio
 let cavalosCadastrados = []; // banco de dados de placas de cavalo cadastradas
+let destinosConhecidos = []; // destinos já usados alguma vez (independente de data)
+let motoristasConhecidos = []; // motoristas já usados alguma vez (independente de data)
 let statusAtualPatio = []; // status atual (carregado/vazio) enquanto o caminhão está no pátio — NÃO altera o registro real de portaria
 let _fbIniciado = false;
 
@@ -922,6 +924,26 @@ function iniciarFirebase() {
     console.error('Firestore erro (cavalosCadastrados):', err);
   });
 
+  // Listener em tempo real para os destinos já conhecidos (usado no autocomplete
+  // e na verificação de "destino novo" — coleção pequena e sempre completa,
+  // ao contrário de `regs` que só guarda os últimos 30 dias. Ver salvarDestinoConhecido().
+  const q5 = window._col('destinosConhecidos');
+  window._onSnapshot(q5, (snap) => {
+    destinosConhecidos = snap.docs.map(d => d.data().destino).filter(d => d && d.length > 0);
+  }, (err) => {
+    console.error('Firestore erro (destinosConhecidos):', err);
+  });
+
+  // Listener em tempo real para os motoristas já conhecidos (mesmo princípio
+  // acima — coleção pequena, usada só pro autocomplete funcionar sempre,
+  // não só nos últimos 30 dias. Ver salvarMotoristaConhecido()).
+  const q6 = window._col('motoristasConhecidos');
+  window._onSnapshot(q6, (snap) => {
+    motoristasConhecidos = snap.docs.map(d => d.data().motorista).filter(m => m && m.length > 0);
+  }, (err) => {
+    console.error('Firestore erro (motoristasConhecidos):', err);
+  });
+
   // Listener em tempo real para o status atual (carregado/vazio) dos caminhões no pátio
   // (camada separada — nunca altera o registro real de entrada/saída)
   const q4 = window._col('statusAtualPatio');
@@ -970,6 +992,7 @@ async function salvarReg(reg) {
   try {
     if (!window._fbReady) { salvar(); return; }
     await window._setDoc(window._doc('registros', String(reg.id)), reg);
+    salvarMotoristaConhecido(reg.motorista);
   } catch(e) {
     console.error('Erro ao salvar:', e);
     toast('Erro ao salvar no servidor');
@@ -1483,7 +1506,7 @@ function autocompletarMotoristaHist(inp) {
   const digitado = inp.value;
   if (!digitado || digitado.length < 2) { renderHistorico(); return; }
   // Autocompletar ignorando acentos
-  const motoristas = [...new Set(regs.map(r => r.motorista).filter(m => m && m.length > 0))];
+  const motoristas = motoristasConhecidos;
   let _ultimaTecla = inp._ultimaTecla || '';
   if (_ultimaTecla !== 'Backspace' && _ultimaTecla !== 'Delete') {
     const match = motoristas.find(m => semAcento(m).startsWith(semAcento(digitado)));
@@ -1506,7 +1529,7 @@ function autocompletarMotoristaReg(inp) {
   inp.dataset.sugestao = '0';
   const digitado = inp.value;
   if (!digitado || digitado.length < 2) return;
-  const motoristas = [...new Set(regs.map(r => r.motorista).filter(m => m && m.length > 0))];
+  const motoristas = motoristasConhecidos;
   const _ult = inp._ultimaTecla || '';
   if (_ult !== 'Backspace' && _ult !== 'Delete') {
     const match = motoristas.find(m => semAcento(m).startsWith(semAcento(digitado)));
@@ -1525,7 +1548,7 @@ function autocompletarDestino(inp) {
   if (!digitado || digitado.length < 2) return;
 
   // Buscar destinos que COMEÇAM com o que foi digitado (ignorando acentos)
-  const destinos = [...new Set(regs.map(r => r.destino).filter(d => d && d.length > 0))];
+  const destinos = destinosConhecidos;
   const match = destinos.find(d => semAcento(d).startsWith(semAcento(digitado)));
 
   if (match && semAcento(match) !== semAcento(digitado)) {
@@ -1540,7 +1563,7 @@ function autocompletarDestino(inp) {
 // Verificar se destino digitado existe no histórico antes de avançar
 function verificarDestino(destino, callback) {
   if (!destino || destino.length === 0) { callback(true); return; }
-  const destinos = [...new Set(regs.map(r => r.destino).filter(d => d && d.length > 0))];
+  const destinos = destinosConhecidos;
   const existe = destinos.some(d => semAcento(d) === semAcento(destino));
   if (existe) { callback(true); return; }
   // Fechar teclado antes de abrir o alerta
@@ -1558,6 +1581,7 @@ function verificarDestino(destino, callback) {
 function _destinoContinuar() {
   document.getElementById('dest-novo-overlay').classList.remove('open');
   if (window._destinoCallback) { window._destinoCallback(true); window._destinoCallback = null; }
+  salvarDestinoConhecido(vals.destino);
 }
 
 function _destinoCorrigir() {
@@ -1571,6 +1595,43 @@ function _destinoCorrigir() {
     const inp = document.getElementById('painel-inp');
     if (inp) { inp.value = ''; inp.focus(); }
   }, 150);
+}
+
+// Guarda um destino na coleção de destinos conhecidos (pra autocomplete e
+// verificação funcionarem pra sempre, não só nos últimos 30 dias). Coleção
+// pequena — 1 documento por destino distinto, não por registro.
+async function salvarDestinoConhecido(destino) {
+  const key = (destino || '').trim();
+  if (!key) return;
+  if (destinosConhecidos.some(d => semAcento(d) === semAcento(key))) return; // já conhecido
+  const docId = key.replace(/\//g, '-').slice(0, 300);
+  try {
+    if (window._fbReady) {
+      await window._setDoc(window._doc('destinosConhecidos', docId), { destino: key });
+    } else {
+      destinosConhecidos.push(key); // sem Firebase disponível: guarda só localmente por ora
+    }
+  } catch (err) {
+    console.error('Erro ao salvar destino conhecido:', err);
+  }
+}
+
+// Mesma lógica para motorista, mas chamada direto ao salvar um registro (não
+// há tela de confirmação "motorista novo?" como existe para destino).
+async function salvarMotoristaConhecido(motorista) {
+  const key = (motorista || '').trim();
+  if (!key) return;
+  if (motoristasConhecidos.some(m => semAcento(m) === semAcento(key))) return; // já conhecido
+  const docId = key.replace(/\//g, '-').slice(0, 300);
+  try {
+    if (window._fbReady) {
+      await window._setDoc(window._doc('motoristasConhecidos', docId), { motorista: key });
+    } else {
+      motoristasConhecidos.push(key);
+    }
+  } catch (err) {
+    console.error('Erro ao salvar motorista conhecido:', err);
+  }
 }
 
 function sugerirInverso(cavalo) {
