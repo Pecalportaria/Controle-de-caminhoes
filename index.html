@@ -1509,8 +1509,12 @@ function autocompletarMotoristaHist(inp) {
   const motoristas = motoristasConhecidos;
   let _ultimaTecla = inp._ultimaTecla || '';
   if (_ultimaTecla !== 'Backspace' && _ultimaTecla !== 'Delete') {
-    const match = motoristas.find(m => semAcento(m).startsWith(semAcento(digitado)));
-    if (match && semAcento(match) !== semAcento(digitado)) {
+    // Ignora correspondências idênticas ao que já foi digitado (ex: um motorista
+    // cadastrado só como "IVONEI") e busca a mais longa entre o que sobrar, pra
+    // não travar em um nome curto quando existe um mais completo (ex: "IVONEI PINHEIRO").
+    const candidatos = motoristas.filter(m => semAcento(m).startsWith(semAcento(digitado)) && semAcento(m) !== semAcento(digitado));
+    const match = candidatos.sort((a,b) => b.length - a.length)[0];
+    if (match) {
       const pos = digitado.length;
       inp.value = match;
       inp.setSelectionRange(pos, match.length);
@@ -1532,8 +1536,9 @@ function autocompletarMotoristaReg(inp) {
   const motoristas = motoristasConhecidos;
   const _ult = inp._ultimaTecla || '';
   if (_ult !== 'Backspace' && _ult !== 'Delete') {
-    const match = motoristas.find(m => semAcento(m).startsWith(semAcento(digitado)));
-    if (match && semAcento(match) !== semAcento(digitado)) {
+    const candidatos = motoristas.filter(m => semAcento(m).startsWith(semAcento(digitado)) && semAcento(m) !== semAcento(digitado));
+    const match = candidatos.sort((a,b) => b.length - a.length)[0];
+    if (match) {
       const pos = digitado.length;
       inp.value = match;
       inp.setSelectionRange(pos, match.length);
