@@ -654,6 +654,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
       <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
       <button class="btn-csv" id="btn-banco-placas" onclick="abrirBancoCavalos()" style="background:#6A1B9A20;border-color:#8E24AA40;color:#CE93D8;padding:14px;font-size:14px;text-align:center">🗄️ BANCO DE DADOS — PLACAS</button>
+      <button class="btn-csv" onclick="migrarMotoristasEDestinos()" style="background:#00695C20;border-color:#00897B40;color:#80CBC4;padding:14px;font-size:14px;text-align:center">🔄 ATUALIZAR AUTOCOMPLETAR (MOTORISTAS/DESTINOS)</button>
       <button class="btn-csv" onclick="abrirEncerrarTurnoRemoto()" style="background:#8B1A1A20;border-color:#C6282840;color:#EF9A9A;padding:14px;font-size:14px;text-align:center">🔒 ENCERRAR TURNO REMOTAMENTE</button>
     </div>
   </div>
@@ -3408,6 +3409,47 @@ function excluirPlacaBanco(cavalo) {
 function fecharBancoEConfig() {
   document.getElementById('banco-overlay').classList.remove('open');
   document.getElementById('config-overlay').classList.remove('open');
+}
+
+// Migração única: varre TODO o histórico de registros e garante que todo
+// motorista e destino já usado alguma vez esteja nas listas de autocomplete
+// (motoristasConhecidos / destinosConhecidos). Necessário só uma vez, pra
+// "recuperar" nomes/destinos antigos que existiam antes dessas listas
+// existirem — depois disso, tudo se mantém em dia sozinho.
+async function migrarMotoristasEDestinos() {
+  if (!window._fbReady) { toast('Sem conexão com o Firebase no momento'); return; }
+  toast('Buscando todo o histórico...');
+  let todos;
+  try {
+    todos = await buscarTodosOsRegistros();
+  } catch (err) {
+    console.error('Erro ao buscar registros para migração:', err);
+    toast('Erro ao buscar o histórico — tente novamente');
+    return;
+  }
+
+  const motoristasNoHistorico = [...new Set(todos.map(r => r.motorista).filter(m => m && m.trim()))];
+  const destinosNoHistorico = [...new Set(todos.map(r => r.destino).filter(d => d && d.trim()))];
+
+  const motoristasFaltando = motoristasNoHistorico.filter(m => !motoristasConhecidos.some(mc => semAcento(mc) === semAcento(m)));
+  const destinosFaltando = destinosNoHistorico.filter(d => !destinosConhecidos.some(dc => semAcento(dc) === semAcento(d)));
+
+  if (!motoristasFaltando.length && !destinosFaltando.length) {
+    toast('Tudo já estava atualizado — nada para migrar');
+    return;
+  }
+
+  toast('Atualizando ' + motoristasFaltando.length + ' motorista(s) e ' + destinosFaltando.length + ' destino(s)...');
+  try {
+    await Promise.all([
+      ...motoristasFaltando.map(m => salvarMotoristaConhecido(m)),
+      ...destinosFaltando.map(d => salvarDestinoConhecido(d)),
+    ]);
+    toast('Autocompletar atualizado: ' + motoristasFaltando.length + ' motorista(s) e ' + destinosFaltando.length + ' destino(s)');
+  } catch (err) {
+    console.error('Erro ao migrar motoristas/destinos:', err);
+    toast('Erro ao atualizar — tente novamente');
+  }
 }
 
 function abrirBancoCavalos() {
