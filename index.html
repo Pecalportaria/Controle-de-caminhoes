@@ -100,8 +100,10 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, or
 body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-height:100vh}
 #app-shell{display:flex;flex-direction:column;min-height:100vh;background:#0A1628}
 
-/* No desktop, ocupa a tela inteira (sem a "moldura" de celular) — evita
-   cortes e aproveita o espaço disponível na janela do navegador. */
+/* No desktop, ocupa a ALTURA inteira da tela (sem cortes), mas mantém uma
+   largura de coluna estreita (proporção de celular) — sem isso, o conteúdo
+   (feito pra tela alta e estreita) fica desproporcional e empurra elementos
+   pra fora da área visível em monitores largos e baixos. */
 @media (min-width:701px){
   body{
     min-height:100vh;
@@ -112,7 +114,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
     padding:0;
   }
   #app-shell{
-    width:100vw;
+    width:min(480px, 100vw);
     height:100vh;
     max-height:100vh;
     border-radius:0;
