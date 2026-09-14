@@ -24,7 +24,7 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, where, limit, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, where, limit, getDocs, getDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 (async function() {
   try {
@@ -81,6 +81,7 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, or
     window._where = where;
     window._limit = limit;
     window._getDocs = getDocs;
+    window._getDoc = getDoc;
     window._fbReady = true;
     window.dispatchEvent(new Event('fbReady'));
   } catch (err) {
@@ -860,6 +861,27 @@ window.addEventListener('error', function(e) {
 let sit = 'carregado';
 let editSit = 'carregado';
 let editId = null;
+let _regEmEdicao = null; // guarda o registro completo sendo editado, mesmo quando
+                          // ele não está em `regs` (fora dos últimos 30 dias)
+
+// Procura um registro pelo id em qualquer busca já feita e guardada em cache
+// nesta sessão (histórico por mês/ano, busca exata por cavalo/motorista/carreta,
+// busca por dia específico, backup/CSV completo) — evita ida desnecessária ao
+// Firestore se o registro já foi carregado por algum desses caminhos.
+function buscarRegistroEmCaches(id) {
+  const fontes = [
+    ..._objectValuesSeguro(_cacheHistoricoPorPeriodo),
+    ..._objectValuesSeguro(_cacheHistoricoPorCampo),
+    ..._objectValuesSeguro(_cacheHistoricoPorDia),
+    _cacheRegistrosCompleto || [],
+  ];
+  for (const lista of fontes) {
+    const achado = lista.find(r => r.id === id);
+    if (achado) return achado;
+  }
+  return null;
+}
+function _objectValuesSeguro(obj) { return obj ? Object.values(obj) : []; }
 let stepAtual = 1;
 const totalSteps = 7;
 let regs = []; // dados carregados do Firestore
@@ -2495,9 +2517,21 @@ function sugerirDestinoHistorico(cavalo, excludeId) {
   return candidatos.length ? candidatos[0].destino : null;
 }
 
-function _editRegInterno(id, campoFoco) {
-  const r = regs.find(x => x.id === id);
-  if (!r) return;
+async function _editRegInterno(id, campoFoco) {
+  let r = regs.find(x => x.id === id) || buscarRegistroEmCaches(id);
+  if (!r && window._fbReady) {
+    try {
+      const snap = await window._getDoc(window._doc('registros', String(id)));
+      if (snap.exists()) {
+        const data = snap.data();
+        r = { ...data, id: data.id || id };
+      }
+    } catch (err) {
+      console.error('Erro ao buscar registro para editar:', err);
+    }
+  }
+  if (!r) { toast('Registro não encontrado'); return; }
+  _regEmEdicao = r;
   editId = id;
   document.getElementById('e-cavalo').value    = r.cavalo    || '';
   document.getElementById('e-carreta').value   = r.carreta   || '';
@@ -2557,6 +2591,7 @@ function _editRegInterno(id, campoFoco) {
 function fecharModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   editId = null;
+  _regEmEdicao = null;
 }
 
 async function salvarEdicao() {
@@ -2573,11 +2608,24 @@ async function salvarEdicao() {
   if (!mot)                  { toast('Informe o motorista'); return; }
   if (!dat)                  { toast('Informe a data'); return; }
   if (!dst)                  { toast('Informe o destino'); return; }
+  if (!_regEmEdicao || _regEmEdicao.id !== editId) { toast('Registro não encontrado'); return; }
   const idx = regs.findIndex(x => x.id === editId);
-  if (idx===-1) return;
-  regs[idx] = {...regs[idx], cavalo:cav, carreta:car, motorista:mot, data:dat, entrada:ent, saida:sai, situacao:editSit, destino:dst, standBy, carretaPendente:false, destinoPendente:false};
-  const regAtualizado = regs[idx];
-  salvar(); fecharModal(); renderLista(); toast('Atualizado!');
+  const regAtualizado = {..._regEmEdicao, cavalo:cav, carreta:car, motorista:mot, data:dat, entrada:ent, saida:sai, situacao:editSit, destino:dst, standBy, carretaPendente:false, destinoPendente:false};
+  if (idx !== -1) {
+    // Registro dentro dos últimos 30 dias: atualiza também o array local,
+    // pra tela principal refletir a mudança na hora.
+    regs[idx] = regAtualizado;
+    salvar();
+  }
+  // Invalida os caches de histórico: se essa edição mudou data/cavalo/motorista/
+  // carreta, uma busca anterior em cache ficaria com o dado antigo até o app reabrir.
+  _cacheHistoricoPorPeriodo && Object.keys(_cacheHistoricoPorPeriodo).forEach(k => delete _cacheHistoricoPorPeriodo[k]);
+  _cacheHistoricoPorCampo && Object.keys(_cacheHistoricoPorCampo).forEach(k => delete _cacheHistoricoPorCampo[k]);
+  _cacheHistoricoPorDia && Object.keys(_cacheHistoricoPorDia).forEach(k => delete _cacheHistoricoPorDia[k]);
+  _cacheRegistrosCompleto = null;
+  fecharModal(); toast('Atualizado!');
+  if (document.getElementById('lista')) renderLista();
+  if (document.getElementById('historico-body')) renderHistorico();
   await salvarReg(regAtualizado);
 
   // Se a placa do cavalo não estiver no banco de dados, oferece cadastrá-la
