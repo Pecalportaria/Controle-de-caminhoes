@@ -655,7 +655,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
       <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
       <button class="btn-csv" id="btn-banco-placas" onclick="abrirBancoCavalos()" style="background:#6A1B9A20;border-color:#8E24AA40;color:#CE93D8;padding:14px;font-size:14px;text-align:center">🗄️ BANCO DE DADOS — PLACAS</button>
-      <button class="btn-csv" onclick="migrarMotoristasEDestinos()" style="background:#00695C20;border-color:#00897B40;color:#80CBC4;padding:14px;font-size:14px;text-align:center">🔄 ATUALIZAR AUTOCOMPLETAR (MOTORISTAS/DESTINOS)</button>
+      <button class="btn-csv" onclick="migrarMotoristasEDestinos()" style="background:#00695C20;border-color:#00897B40;color:#80CBC4;padding:14px;font-size:14px;text-align:center">🔄 ATUALIZAR AUTOCOMPLETAR E PÁTIO/RUA</button>
       <button class="btn-csv" onclick="abrirEncerrarTurnoRemoto()" style="background:#8B1A1A20;border-color:#C6282840;color:#EF9A9A;padding:14px;font-size:14px;text-align:center">🔒 ENCERRAR TURNO REMOTAMENTE</button>
     </div>
   </div>
@@ -891,6 +891,10 @@ let ajustesPatio = []; // ajustes manuais de inclusão/retirada do pátio
 let cavalosCadastrados = []; // banco de dados de placas de cavalo cadastradas
 let destinosConhecidos = []; // destinos já usados alguma vez (independente de data)
 let motoristasConhecidos = []; // motoristas já usados alguma vez (independente de data)
+// Estado (último evento conhecido) de cada cavalo, independente de quando
+// aconteceu — corrige o Pátio/Rua "esquecerem" caminhões parados há mais de
+// 30 dias (a janela do listener ao vivo). Ver atualizarEstadoCavalo().
+let estadoCavalosAtual = {};
 let statusAtualPatio = []; // status atual (carregado/vazio) enquanto o caminhão está no pátio — NÃO altera o registro real de portaria
 let _fbIniciado = false;
 
@@ -967,6 +971,20 @@ function iniciarFirebase() {
     console.error('Firestore erro (motoristasConhecidos):', err);
   });
 
+  // Listener em tempo real para o estado atual de cada cavalo (último evento
+  // conhecido, de qualquer data) — coleção pequena, do tamanho da frota, usada
+  // pelo cálculo do Pátio e da Rua em vez de `regs` (que só tem 30 dias).
+  const q7 = window._col('estadoCavalos');
+  window._onSnapshot(q7, (snap) => {
+    const novo = {};
+    snap.docs.forEach(d => { novo[d.id] = d.data(); });
+    estadoCavalosAtual = novo;
+    if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
+    if (document.getElementById('rua-overlay')?.classList.contains('open')) renderRua();
+  }, (err) => {
+    console.error('Firestore erro (estadoCavalos):', err);
+  });
+
   // Listener em tempo real para o status atual (carregado/vazio) dos caminhões no pátio
   // (camada separada — nunca altera o registro real de entrada/saída)
   const q4 = window._col('statusAtualPatio');
@@ -1016,6 +1034,7 @@ async function salvarReg(reg) {
     if (!window._fbReady) { salvar(); return; }
     await window._setDoc(window._doc('registros', String(reg.id)), reg);
     salvarMotoristaConhecido(reg.motorista);
+    atualizarEstadoCavalo(reg);
   } catch(e) {
     console.error('Erro ao salvar:', e);
     toast('Erro ao salvar no servidor');
@@ -1659,6 +1678,56 @@ async function salvarMotoristaConhecido(motorista) {
     }
   } catch (err) {
     console.error('Erro ao salvar motorista conhecido:', err);
+  }
+}
+
+// Atualiza o estado atual (último evento conhecido) do cavalo desse registro,
+// pra Pátio/Rua funcionarem certo mesmo se ele ficar parado por mais de 30
+// dias. Só sobrescreve se este registro for igual ou mais recente que o
+// estado já guardado — assim, editar um registro antigo não bagunça o estado
+// atual se já existir um evento mais novo para esse cavalo.
+async function atualizarEstadoCavalo(reg) {
+  if (!reg.cavalo || reg.standBy) return; // Stand By não é considerado um "evento" confirmado
+  const key = reg.cavalo.toUpperCase();
+  const dt = reg.data + (reg.entrada || reg.saida || '');
+  const atual = estadoCavalosAtual[key];
+  if (atual && atual.dt >= dt) return; // já existe um estado igual ou mais recente
+  const novoEstado = { ...reg, dt };
+  estadoCavalosAtual[key] = novoEstado; // aplica localmente já, o listener confirma depois
+  try {
+    if (window._fbReady) await window._setDoc(window._doc('estadoCavalos', key), novoEstado);
+  } catch (err) {
+    console.error('Erro ao atualizar estado do cavalo:', err);
+  }
+}
+
+// Recalcula o estado de um cavalo do zero (usado depois de excluir um
+// registro, já que o estado guardado pode ter ficado apontando pro registro
+// que acabou de ser apagado). Busca só os registros DESSE cavalo — barato,
+// não é a coleção inteira.
+async function recalcularEstadoCavalo(cavalo) {
+  if (!cavalo || !window._fbReady) return;
+  const key = cavalo.toUpperCase();
+  try {
+    delete _cacheHistoricoPorCampo['cavalo:' + cavalo]; // força buscar de novo, sem o registro apagado
+    const todosDoCavalo = await buscarHistoricoPorCampoExato('cavalo', cavalo);
+    const validos = todosDoCavalo.filter(r => !r.standBy);
+    if (!validos.length) {
+      await window._deleteDoc(window._doc('estadoCavalos', key));
+      delete estadoCavalosAtual[key];
+      return;
+    }
+    const maisRecente = validos.reduce((a, b) => {
+      const da = a.data + (a.entrada || a.saida || '');
+      const db = b.data + (b.entrada || b.saida || '');
+      return db > da ? b : a;
+    });
+    const dt = maisRecente.data + (maisRecente.entrada || maisRecente.saida || '');
+    const novoEstado = { ...maisRecente, dt };
+    estadoCavalosAtual[key] = novoEstado;
+    await window._setDoc(window._doc('estadoCavalos', key), novoEstado);
+  } catch (err) {
+    console.error('Erro ao recalcular estado do cavalo:', err);
   }
 }
 
@@ -2465,10 +2534,15 @@ function _confirmarDelComSenha() {
   pedirSenha('Digite a senha', 'Informe a senha para confirmar a exclusão', async function(senha) {
     if (senha !== '2026') { toast('Senha incorreta!'); return; }
     const idDel = _delId;
+    const regRemovido = regs.find(x => x.id === idDel) || buscarRegistroEmCaches(idDel);
     regs = regs.filter(x => x.id !== idDel);
     _delId = null;
     salvar(); renderLista(); toast('Registro removido');
     await deletarReg(idDel);
+    // Se o registro apagado era o mais recente conhecido desse cavalo (ou
+    // podia ser), recalcula o estado dele pra Pátio/Rua não ficarem apontando
+    // pro registro que não existe mais.
+    if (regRemovido && regRemovido.cavalo) await recalcularEstadoCavalo(regRemovido.cavalo);
   });
 }
 
@@ -3123,17 +3197,10 @@ function mostrarErroBackup() {
 let _ultimoEventoPorCavalo = {}; // cache do último evento real (entrada ou saída) de cada cavalo
 
 function calcularPatio() {
-  // Para cada cavalo, pegar o registro mais recente
-  const porCavalo = {};
-  regs.forEach(r => {
-    if (!r.cavalo) return;
-    if (r.standBy) return; // Stand By ainda não é um movimento confirmado — não conta como "último evento"
-    const key = r.cavalo.toUpperCase();
-    const dt = r.data + (r.entrada || r.saida || '');
-    if (!porCavalo[key] || dt > porCavalo[key].dt) {
-      porCavalo[key] = { ...r, dt };
-    }
-  });
+  // Estado atual de cada cavalo — vem de `estadoCavalosAtual` (coleção própria,
+  // sempre completa) em vez de `regs` (só os últimos 30 dias), pra não
+  // "esquecer" caminhões parados há mais tempo que isso.
+  const porCavalo = estadoCavalosAtual;
   _ultimoEventoPorCavalo = porCavalo; // guarda para o aplicarAjustesPatio saber se há evento real mais novo
 
   // Apenas cavalos que entraram E cujo registro mais recente NÃO tem saída
@@ -3482,20 +3549,42 @@ async function migrarMotoristasEDestinos() {
   const motoristasFaltando = motoristasNoHistorico.filter(m => !motoristasConhecidos.some(mc => semAcento(mc) === semAcento(m)));
   const destinosFaltando = destinosNoHistorico.filter(d => !destinosConhecidos.some(dc => semAcento(dc) === semAcento(d)));
 
-  if (!motoristasFaltando.length && !destinosFaltando.length) {
+  // Recalcula o estado (último evento) de cada cavalo com base em TODO o
+  // histórico, não só nos últimos 30 dias — corrige caminhões que ficaram
+  // "esquecidos" do Pátio/Rua por estarem parados há mais tempo que isso.
+  const porCavaloCompleto = {};
+  todos.forEach(r => {
+    if (!r.cavalo || r.standBy) return;
+    const key = r.cavalo.toUpperCase();
+    const dt = r.data + (r.entrada || r.saida || '');
+    if (!porCavaloCompleto[key] || dt > porCavaloCompleto[key].dt) {
+      porCavaloCompleto[key] = { ...r, dt };
+    }
+  });
+  const cavalosParaAtualizar = Object.entries(porCavaloCompleto).filter(([key, reg]) => {
+    const atual = estadoCavalosAtual[key];
+    return !atual || atual.dt !== reg.dt;
+  });
+
+  if (!motoristasFaltando.length && !destinosFaltando.length && !cavalosParaAtualizar.length) {
     toast('Tudo já estava atualizado — nada para migrar');
     return;
   }
 
-  toast('Atualizando ' + motoristasFaltando.length + ' motorista(s) e ' + destinosFaltando.length + ' destino(s)...');
+  toast('Atualizando ' + motoristasFaltando.length + ' motorista(s), ' + destinosFaltando.length + ' destino(s) e ' + cavalosParaAtualizar.length + ' cavalo(s)...');
   try {
     await Promise.all([
       ...motoristasFaltando.map(m => salvarMotoristaConhecido(m)),
       ...destinosFaltando.map(d => salvarDestinoConhecido(d)),
+      ...cavalosParaAtualizar.map(([key, reg]) => {
+        estadoCavalosAtual[key] = reg;
+        return window._setDoc(window._doc('estadoCavalos', key), reg);
+      }),
     ]);
-    toast('Autocompletar atualizado: ' + motoristasFaltando.length + ' motorista(s) e ' + destinosFaltando.length + ' destino(s)');
+    toast('Atualizado: ' + motoristasFaltando.length + ' motorista(s), ' + destinosFaltando.length + ' destino(s), ' + cavalosParaAtualizar.length + ' cavalo(s)');
+    renderPatio(); renderRua();
   } catch (err) {
-    console.error('Erro ao migrar motoristas/destinos:', err);
+    console.error('Erro ao migrar motoristas/destinos/cavalos:', err);
     toast('Erro ao atualizar — tente novamente');
   }
 }
@@ -3703,17 +3792,9 @@ function abrirDetalheCartao(tipo, cavalo) {
 
 // ── Rua — caminhões fora da empresa ───────────────
 function calcularRua() {
-  // Para cada cavalo, pegar o registro mais recente
-  const porCavalo = {};
-  regs.forEach(r => {
-    if (!r.cavalo) return;
-    if (r.standBy) return; // Stand By ainda não é um movimento confirmado — não conta como "último evento"
-    const key = r.cavalo.toUpperCase();
-    const dt = r.data + (r.entrada || r.saida || '');
-    if (!porCavalo[key] || dt > porCavalo[key].dt) {
-      porCavalo[key] = { ...r, dt };
-    }
-  });
+  // Mesmo princípio do Pátio: usa o estado completo (estadoCavalosAtual), não
+  // só os últimos 30 dias, pra não perder caminhões parados na rua há mais tempo.
+  const porCavalo = estadoCavalosAtual;
 
   // Apenas cavalos cujo último movimento foi saída E não tem entrada registrada junto
   // (mesma proteção usada no pátio, para casos de registro com os dois campos preenchidos)
