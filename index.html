@@ -655,7 +655,6 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
       <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
       <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
       <button class="btn-csv" id="btn-banco-placas" onclick="abrirBancoCavalos()" style="background:#6A1B9A20;border-color:#8E24AA40;color:#CE93D8;padding:14px;font-size:14px;text-align:center">🗄️ BANCO DE DADOS — PLACAS</button>
-      <button class="btn-csv" onclick="migrarMotoristasEDestinos()" style="background:#00695C20;border-color:#00897B40;color:#80CBC4;padding:14px;font-size:14px;text-align:center">🔄 ATUALIZAR AUTOCOMPLETAR E PÁTIO/RUA</button>
       <button class="btn-csv" onclick="abrirEncerrarTurnoRemoto()" style="background:#8B1A1A20;border-color:#C6282840;color:#EF9A9A;padding:14px;font-size:14px;text-align:center">🔒 ENCERRAR TURNO REMOTAMENTE</button>
     </div>
   </div>
@@ -1502,11 +1501,11 @@ function removerPorteiro(idx) {
 
 
 // ── Sugestões baseadas nos últimos 5 registros do cavalo ──
-function buscarSugestoes(cavalo) {
+function buscarSugestoes(cavalo, fonte) {
   if (!cavalo || cavalo.length < 4) return null;
 
   // Pegar os últimos 5 registros deste cavalo
-  const ultimos5 = regs
+  const ultimos5 = (fonte || regs)
     .filter(r => r.cavalo === cavalo)
     .sort((a,b) => {
       const da = a.data+(a.entrada||a.saida||'');
@@ -1777,8 +1776,8 @@ function sugerirInverso(cavalo) {
 // data (usado para sugerir a mesma carreta quando o caminhão está entrando)
 // Busca o registro da última SAÍDA deste cavalo, não importando a data
 // (usado para sugerir a mesma carreta/motorista quando o caminhão está entrando)
-function buscarUltimaSaida(cavalo) {
-  return regs
+function buscarUltimaSaida(cavalo, fonte) {
+  return (fonte || regs)
     .filter(r => r.cavalo === cavalo && r.saida)
     .sort((a,b) => {
       const da = a.data + a.saida;
@@ -1797,6 +1796,31 @@ function aplicarSugestoes(cavalo) {
   const motoristaSugerido = (ultimaSaida && ultimaSaida.motorista) || (sug && sug.motorista);
   if (carretaSugerida)   { vals.carreta   = carretaSugerida;   window._sugestoes.carreta   = carretaSugerida;   }
   if (motoristaSugerido) { vals.motorista = motoristaSugerido; window._sugestoes.motorista = motoristaSugerido; }
+}
+
+// Como aplicarSugestoes() só enxerga os últimos 30 dias (regs), um cavalo
+// pouco usado (última movimentação há mais tempo que isso) ficava sem
+// sugestão nenhuma. Aqui, se nada foi encontrado localmente, busca o
+// histórico completo desse cavalo (consulta pontual e barata, cacheada)
+// antes de desistir.
+async function aplicarSugestoesCompleto(cavalo) {
+  aplicarSugestoes(cavalo);
+  if (!window._sugestoes.carreta && !window._sugestoes.motorista && window._fbReady) {
+    try {
+      const completo = await buscarHistoricoPorCampoExato('cavalo', cavalo);
+      if (completo.length) {
+        const ehEntrada = !!vals.entrada;
+        const ultimaSaida = ehEntrada ? buscarUltimaSaida(cavalo, completo) : null;
+        const sug = buscarSugestoes(cavalo, completo);
+        const carretaSugerida   = (ultimaSaida && ultimaSaida.carreta)   || (sug && sug.carreta);
+        const motoristaSugerido = (ultimaSaida && ultimaSaida.motorista) || (sug && sug.motorista);
+        if (carretaSugerida)   { vals.carreta   = carretaSugerida;   window._sugestoes.carreta   = carretaSugerida;   }
+        if (motoristaSugerido) { vals.motorista = motoristaSugerido; window._sugestoes.motorista = motoristaSugerido; }
+      }
+    } catch (err) {
+      console.error('Erro ao buscar sugestões completas do cavalo:', err);
+    }
+  }
 }
 
 function abrirPainel() {
@@ -2262,7 +2286,7 @@ function voltarStep() {
   renderStep();
 }
 
-function avancarStep() {
+async function avancarStep() {
   const s = stepsConfig[stepAtual-1];
 
   // Salvar valor
@@ -2293,7 +2317,7 @@ function avancarStep() {
   }
   if (stepAtual===2 && !vals.data) { toast('Informe a data'); return; }
   if (stepAtual===3 && (!vals.cavalo||vals.cavalo.length!==4)) { toast('Placa do cavalo: 4 caracteres'); return; }
-  if (stepAtual===3) { window._sugestoes = {}; aplicarSugestoes(vals.cavalo); sugerirInverso(vals.cavalo); }
+  if (stepAtual===3) { window._sugestoes = {}; await aplicarSugestoesCompleto(vals.cavalo); sugerirInverso(vals.cavalo); }
   if (stepAtual===4 && !vals.motorista) { toast('Informe o motorista'); return; }
   if (stepAtual===5) {
     if (!vals.destino) {
@@ -2892,9 +2916,13 @@ async function exportCSV() {
 // Init
 // ── Histórico ────────────────────────────────────────
 function initHistoricoFiltros() {
-  const anos = [...new Set(regs.map(r => r.data?.slice(0,4)).filter(Boolean))].sort().reverse();
-  const anoAtual = new Date().getFullYear().toString();
-  if (!anos.includes(anoAtual)) anos.unshift(anoAtual);
+  // Gera um intervalo fixo de anos (atual + 4 anteriores), independente do
+  // que está em `regs` (só 30 dias) — senão anos mais antigos nem apareceriam
+  // como opção, mesmo a busca por trás suportando qualquer ano.
+  const anoAtualNum = new Date().getFullYear();
+  const anos = [];
+  for (let a = anoAtualNum; a >= anoAtualNum - 4; a--) anos.push(String(a));
+  const anoAtual = String(anoAtualNum);
   const selAno = document.getElementById('hist-ano');
   if (selAno) selAno.innerHTML = anos.map(a => '<option value="'+a+'"'+(a===anoAtual?' selected':'')+'>'+a+'</option>').join('');
   const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -3526,68 +3554,8 @@ function fecharBancoEConfig() {
   document.getElementById('config-overlay').classList.remove('open');
 }
 
-// Migração única: varre TODO o histórico de registros e garante que todo
-// motorista e destino já usado alguma vez esteja nas listas de autocomplete
-// (motoristasConhecidos / destinosConhecidos). Necessário só uma vez, pra
-// "recuperar" nomes/destinos antigos que existiam antes dessas listas
-// existirem — depois disso, tudo se mantém em dia sozinho.
-async function migrarMotoristasEDestinos() {
-  if (!window._fbReady) { toast('Sem conexão com o Firebase no momento'); return; }
-  toast('Buscando todo o histórico...');
-  let todos;
-  try {
-    todos = await buscarTodosOsRegistros();
-  } catch (err) {
-    console.error('Erro ao buscar registros para migração:', err);
-    toast('Erro ao buscar o histórico — tente novamente');
-    return;
-  }
 
-  const motoristasNoHistorico = [...new Set(todos.map(r => r.motorista).filter(m => m && m.trim()))];
-  const destinosNoHistorico = [...new Set(todos.map(r => r.destino).filter(d => d && d.trim()))];
 
-  const motoristasFaltando = motoristasNoHistorico.filter(m => !motoristasConhecidos.some(mc => semAcento(mc) === semAcento(m)));
-  const destinosFaltando = destinosNoHistorico.filter(d => !destinosConhecidos.some(dc => semAcento(dc) === semAcento(d)));
-
-  // Recalcula o estado (último evento) de cada cavalo com base em TODO o
-  // histórico, não só nos últimos 30 dias — corrige caminhões que ficaram
-  // "esquecidos" do Pátio/Rua por estarem parados há mais tempo que isso.
-  const porCavaloCompleto = {};
-  todos.forEach(r => {
-    if (!r.cavalo || r.standBy) return;
-    const key = r.cavalo.toUpperCase();
-    const dt = r.data + (r.entrada || r.saida || '');
-    if (!porCavaloCompleto[key] || dt > porCavaloCompleto[key].dt) {
-      porCavaloCompleto[key] = { ...r, dt };
-    }
-  });
-  const cavalosParaAtualizar = Object.entries(porCavaloCompleto).filter(([key, reg]) => {
-    const atual = estadoCavalosAtual[key];
-    return !atual || atual.dt !== reg.dt;
-  });
-
-  if (!motoristasFaltando.length && !destinosFaltando.length && !cavalosParaAtualizar.length) {
-    toast('Tudo já estava atualizado — nada para migrar');
-    return;
-  }
-
-  toast('Atualizando ' + motoristasFaltando.length + ' motorista(s), ' + destinosFaltando.length + ' destino(s) e ' + cavalosParaAtualizar.length + ' cavalo(s)...');
-  try {
-    await Promise.all([
-      ...motoristasFaltando.map(m => salvarMotoristaConhecido(m)),
-      ...destinosFaltando.map(d => salvarDestinoConhecido(d)),
-      ...cavalosParaAtualizar.map(([key, reg]) => {
-        estadoCavalosAtual[key] = reg;
-        return window._setDoc(window._doc('estadoCavalos', key), reg);
-      }),
-    ]);
-    toast('Atualizado: ' + motoristasFaltando.length + ' motorista(s), ' + destinosFaltando.length + ' destino(s), ' + cavalosParaAtualizar.length + ' cavalo(s)');
-    renderPatio(); renderRua();
-  } catch (err) {
-    console.error('Erro ao migrar motoristas/destinos/cavalos:', err);
-    toast('Erro ao atualizar — tente novamente');
-  }
-}
 
 function abrirBancoCavalos() {
   document.getElementById('banco-cavalo-novo').value = '';
@@ -3861,11 +3829,19 @@ function renderRua() {
 // Confirma a saída de um caminhão em Stand By com o horário atual
 async function confirmarSaidaStandBy(id) {
   if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
-  const idx = regs.findIndex(r => r.id === id);
-  if (idx === -1) return;
-  regs[idx] = { ...regs[idx], saida: horaAgora(), standBy: false };
-  const regAtualizado = regs[idx];
-  salvar();
+  let idx = regs.findIndex(r => r.id === id);
+  let regBase = idx !== -1 ? regs[idx] : (buscarRegistroEmCaches(id) || null);
+  if (!regBase && window._fbReady) {
+    try {
+      const snap = await window._getDoc(window._doc('registros', String(id)));
+      if (snap.exists()) { const data = snap.data(); regBase = { ...data, id: data.id || id }; }
+    } catch (err) {
+      console.error('Erro ao buscar registro Stand By:', err);
+    }
+  }
+  if (!regBase) { toast('Registro não encontrado'); return; }
+  const regAtualizado = { ...regBase, saida: horaAgora(), standBy: false };
+  if (idx !== -1) { regs[idx] = regAtualizado; salvar(); }
   renderLista();
   renderRua();
   toast('Saída confirmada — ' + regAtualizado.saida + ' ✓');
