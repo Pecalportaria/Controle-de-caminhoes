@@ -1240,10 +1240,21 @@ function turnoAtivo() {
   return _turnoAtual !== null;
 }
 
-// Verifica se É ESTE dispositivo que está com o turno ativo
+// Verifica se É ESTE dispositivo (esta sessão de login específica) que está
+// com o turno ativo. Usa um ID único gerado a cada login — nunca o nome do
+// porteiro — porque comparar por nome falha assim que outro aparelho já
+// tiver usado esse mesmo nome alguma vez (o nome fica salvo local para
+// sempre se o logout normal não acontecer, ex: fechar o navegador, queda de
+// energia), fazendo aquele aparelho antigo continuar se achando "logado"
+// mesmo depois de um turno novo ter começado em outro aparelho.
 function euEstouLogado() {
-  const meuNome = localStorage.getItem('meu_turno');
-  return meuNome && _turnoAtual && _turnoAtual.nome === meuNome;
+  const meuSid = localStorage.getItem('meu_turno_sid');
+  return !!meuSid && !!_turnoAtual && _turnoAtual.sid === meuSid;
+}
+
+function gerarSid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'sid-' + Date.now() + '-' + Math.random().toString(36).slice(2);
 }
 
 // Escutar mudanças no turno em tempo real (qualquer dispositivo)
@@ -1331,11 +1342,11 @@ function aplicarGateAcesso() {
   const box = document.getElementById('acesso-restrito-box');
   if (!box) return;
   // Enquanto a 1ª resposta do turno ainda não chegou do Firestore, usa o último
-  // estado conhecido deste dispositivo (meu_turno) para não "piscar" a tela de
-  // acesso restrito em quem já estava logado. Assim que o turno é confirmado
+  // estado conhecido deste dispositivo (meu_turno_sid) para não "piscar" a tela
+  // de acesso restrito em quem já estava logado. Assim que o turno é confirmado
   // pelo servidor, acessoLiberado() passa a valer de verdade.
-  const meuNome = localStorage.getItem('meu_turno');
-  const aguardandoConfirmacao = !_turnoCarregado && !!meuNome;
+  const meuSidLocal = localStorage.getItem('meu_turno_sid');
+  const aguardandoConfirmacao = !_turnoCarregado && !!meuSidLocal;
   const liberado = acessoLiberado() || aguardandoConfirmacao;
   box.style.display = liberado ? 'none' : 'flex';
   document.body.classList.toggle('bloqueado', !liberado);
@@ -1391,8 +1402,9 @@ async function confirmarLoginTurno() {
   if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
 
   try {
-    await window._setDoc(window._doc('config', 'turno'), { nome: p.nome, inicio: Date.now() });
-    localStorage.setItem('meu_turno', p.nome); // registrar neste dispositivo quem logou
+    const sid = gerarSid();
+    await window._setDoc(window._doc('config', 'turno'), { nome: p.nome, inicio: Date.now(), sid });
+    localStorage.setItem('meu_turno_sid', sid); // registrar neste dispositivo o ID desta sessão de login
     document.getElementById('login-overlay').classList.remove('open');
     toast('Turno iniciado — ' + p.nome);
   } catch(e) {
@@ -1409,8 +1421,8 @@ function fazerLogoutTurno() {
   pedirSenha('Finalizar turno', 'Digite a senha de ' + t.nome + ' para sair', async function(senha) {
     if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
     try {
-      await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0 });
-      localStorage.removeItem('meu_turno');
+      await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0, sid: '' });
+      localStorage.removeItem('meu_turno_sid');
       document.getElementById('turno-ativo-overlay').classList.remove('open');
       toast('Turno finalizado');
     } catch(e) {
@@ -1437,9 +1449,10 @@ function abrirEncerrarTurnoRemoto() {
     async function(senha) {
       if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
       try {
-        await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0 });
+        const sidAtual = getTurno() ? getTurno().sid : null;
+        await window._setDoc(window._doc('config', 'turno'), { nome: '', inicio: 0, sid: '' });
         // Se este aparelho por acaso for o mesmo que estava logado, limpa o registro local também
-        if (localStorage.getItem('meu_turno') === nomeAtual) localStorage.removeItem('meu_turno');
+        if (sidAtual && localStorage.getItem('meu_turno_sid') === sidAtual) localStorage.removeItem('meu_turno_sid');
         toast('Turno de ' + nomeAtual + ' encerrado remotamente');
       } catch(e) {
         console.error('Erro ao encerrar turno remotamente:', e);
