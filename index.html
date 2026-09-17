@@ -108,17 +108,15 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
   body{
     min-height:100vh;
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     justify-content:center;
     background:#03070E;
     padding:0;
   }
   #app-shell{
     width:min(480px, 100vw);
-    height:100vh;
-    max-height:100vh;
+    min-height:100vh;
     border-radius:0;
-    overflow:hidden;
     position:relative;
     /* Cria um novo "containing block": elementos com position:fixed dentro
        do app passam a se posicionar relativos a esta moldura, não à janela
