@@ -97,7 +97,7 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, or
   --text:#0D1B2A;
   --radius:10px;--radius-lg:16px;
 }
-body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-height:100vh}
+body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-height:100vh;color-scheme:dark}
 #app-shell{display:flex;flex-direction:column;min-height:100vh;background:#0A1628}
 
 /* No desktop, ocupa a ALTURA inteira da tela (sem cortes), mas mantém uma
@@ -282,6 +282,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
 .lista-header{flex-shrink:0;background:#0A1628;padding:12px 16px 10px;border-bottom:1px solid #64B5F6;z-index:20;position:sticky;top:41px}
 .filter-bar{display:flex;gap:8px}
 .filter-bar input[type="date"]{flex:1;padding:10px 12px;border:1px solid #90CAF9;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:13px;background:#0D1F3C;color:#fff;outline:none}
+input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:2px;filter:invert(1) brightness(1.4)}
 .btn-csv{padding:10px 14px;background:#0D1F3C;border:1px solid #1565C040;border-radius:var(--radius);font-size:13px;font-weight:600;color:#42A5F5;cursor:pointer;font-family:'Barlow',sans-serif}
 .lista-body{padding:12px 16px;background:#0A1628;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
 
@@ -402,10 +403,10 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
 <div class="section" id="tab-lista">
   <div class="lista-header">
     <div class="filter-bar" style="justify-content:center;gap:8px;flex-wrap:nowrap">
-      <input type="date" id="filtro-data" onchange="renderLista()" style="flex:0 0 auto;width:116px;padding:11px 6px;font-size:13px;border:2px solid #FFFFFF">
-      <button class="btn-csv" id="btn-patio" onclick="abrirPatio()" style="background:#2E7D32;color:#fff;border:2px solid #FFFFFF;padding:11px 12px;font-size:13px;flex:0 0 auto;white-space:nowrap">PÁTIO</button>
-      <button class="btn-csv" id="btn-rua" onclick="abrirRua()" style="background:#C62828;color:#fff;border:2px solid #FFFFFF;padding:11px 12px;font-size:13px;flex:0 0 auto;white-space:nowrap">RUA</button>
-      <button class="btn-csv" id="btn-config" onclick="abrirConfiguracoes()" title="Configurações" style="padding:11px 12px;font-size:15px;flex:0 0 auto;white-space:nowrap">⚙️</button>
+      <input type="date" id="filtro-data" onchange="renderLista()" onclick="this.showPicker&&this.showPicker()" style="flex:0 0 auto;width:128px;padding:11px 6px;font-size:13px;border:2px solid #FFFFFF">
+      <button class="btn-csv" id="btn-patio" onclick="abrirPatio()" style="background:#2E7D32;color:#fff;border:2px solid #FFFFFF;padding:11px 10px;font-size:13px;flex:0 0 auto;white-space:nowrap">PÁTIO</button>
+      <button class="btn-csv" id="btn-rua" onclick="abrirRua()" style="background:#C62828;color:#fff;border:2px solid #FFFFFF;padding:11px 10px;font-size:13px;flex:0 0 auto;white-space:nowrap">RUA</button>
+      <button class="btn-csv" id="btn-config" onclick="abrirConfiguracoes()" title="Configurações" style="padding:11px 10px;font-size:15px;flex:0 0 auto;white-space:nowrap">⚙️</button>
     </div>
   </div>
   <div class="lista-body">
@@ -502,7 +503,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="e-cavalo" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="e-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div></div>
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="e-motorista" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
-      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="e-data" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"></div></div>
+      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="e-data" onclick="this.showPicker&&this.showPicker()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"></div></div>
       <div class="form-row">
         <div class="form-label">Horário</div>
         <div class="hora-wrap">
@@ -529,7 +530,7 @@ body.bloqueado #tab-lista,body.bloqueado #tab-historico,body.bloqueado #turno-ba
       <div class="form-row"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="r-cavalo" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
       <div class="form-row" style="position:relative"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="r-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div><span id="r-carreta-pendente-aviso" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🕓</span></div>
       <div class="form-row"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="r-motorista" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
-      <div class="form-row"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="r-data" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"></div></div>
+      <div class="form-row"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="r-data" onclick="this.showPicker&&this.showPicker()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"></div></div>
       <div class="form-row">
         <div class="form-label">Horário</div>
         <div class="hora-wrap">
@@ -1920,7 +1921,7 @@ function renderStep() {
       if (btnSugerido) btnSugerido.style.opacity = '0.7';
     }
   } else if (s.tipo==='date') {
-    cont.innerHTML = '<input type="date" id="painel-inp" class="painel-input" value="'+(vals.data||hoje())+'">';
+    cont.innerHTML = '<input type="date" id="painel-inp" class="painel-input" value="'+(vals.data||hoje())+'" onclick="this.showPicker&&this.showPicker()">';
     // Garante que o painel fique embaixo (perto do polegar), removendo qualquer
     // reposicionamento para o topo que tenha ficado ativo do campo anterior.
     document.getElementById('painel-overlay')?.classList.remove('teclado-aberto');
