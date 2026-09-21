@@ -2414,13 +2414,45 @@ function resetForm() {
   fecharPainel();
 }
 
+// Descobre qual foi o último movimento conhecido de um cavalo, olhando tanto
+// os registros normais de entrada/saída (estadoCavalosAtual) quanto os
+// ajustes manuais de Pátio/Rua (ajustesPatio — usados quando alguém inclui
+// ou retira um cavalo do pátio manualmente, sem passar pelo fluxo normal de
+// registro). Usa o que for mais recente dos dois.
+function obterUltimoMovimentoConhecido(cavaloKey) {
+  const doRegistro = estadoCavalosAtual[cavaloKey];
+  const ajuste = ajustesPatio.find(a => (a.cavalo || '').toUpperCase() === cavaloKey);
+
+  const candidatos = [];
+  if (doRegistro && !doRegistro.standBy && (doRegistro.entrada || doRegistro.saida)) {
+    candidatos.push({
+      data: doRegistro.data,
+      hora: doRegistro.entrada || doRegistro.saida,
+      ehEntrada: !!doRegistro.entrada,
+      origem: ''
+    });
+  }
+  if (ajuste && ajuste.data) {
+    candidatos.push({
+      data: ajuste.data,
+      hora: ajuste.hora || '00:00',
+      ehEntrada: ajuste.tipo === 'incluir',
+      origem: ' (ajuste manual de pátio/rua)'
+    });
+  }
+  if (!candidatos.length) return null;
+  candidatos.sort((a, b) => (b.data + b.hora) > (a.data + a.hora) ? 1 : -1);
+  return candidatos[0];
+}
+
 // Confere se a entrada/saída que está sendo registrada AGORA "bate" com o
-// último movimento conhecido desse cavalo: pra sair, ele precisa ter
-// entrado antes; pra entrar, ele precisa ter saído antes. Só considera o
-// último movimento se ele foi nos últimos 2 meses — mais antigo que isso,
-// não há como confiar que ainda reflete a situação real do cavalo, então
-// libera sem avisar. Devolve uma mensagem de alerta (string) se não bateu,
-// ou null se está tudo certo / não há o que comparar.
+// último movimento conhecido desse cavalo (registro normal OU ajuste manual
+// de pátio/rua, o que for mais recente): pra sair, ele precisa ter entrado
+// antes; pra entrar, ele precisa ter saído antes. Só considera o último
+// movimento se ele foi nos últimos 2 meses — mais antigo que isso, não há
+// como confiar que ainda reflete a situação real do cavalo, então libera
+// sem avisar. Devolve uma mensagem de alerta (string) se não bateu, ou null
+// se está tudo certo / não há o que comparar.
 function verificarCoincidenciaMovimento(reg) {
   if (reg.standBy || !reg.cavalo) return null; // Stand By não é uma entrada/saída de verdade
   const ehEntrada = !!reg.entrada;
@@ -2428,10 +2460,10 @@ function verificarCoincidenciaMovimento(reg) {
   if (!ehEntrada && !ehSaida) return null;
 
   const key = reg.cavalo.toUpperCase();
-  const ultimo = estadoCavalosAtual[key];
-  if (!ultimo || ultimo.standBy) return null; // sem histórico confiável — libera
+  const ultimo = obterUltimoMovimentoConhecido(key);
+  if (!ultimo) return null; // sem histórico confiável — libera
 
-  const dtUltimo = new Date(ultimo.data + 'T' + (ultimo.entrada || ultimo.saida || '00:00'));
+  const dtUltimo = new Date(ultimo.data + 'T' + (ultimo.hora || '00:00'));
   const dtRegistro = new Date(reg.data + 'T' + (reg.entrada || reg.saida || '00:00'));
   const diffDias = (dtRegistro - dtUltimo) / (1000 * 60 * 60 * 24);
   // Fora da janela de 2 meses, ou este registro é anterior ao último
@@ -2439,11 +2471,11 @@ function verificarCoincidenciaMovimento(reg) {
   if (isNaN(diffDias) || diffDias > 60 || diffDias < 0) return null;
 
   const dataUltimoBR = (ultimo.data || '').split('-').reverse().join('/');
-  if (ehEntrada && ultimo.entrada) {
-    return 'O cavalo ' + reg.cavalo.toUpperCase() + ' já tem uma ENTRADA registrada em ' + dataUltimoBR + ' às ' + ultimo.entrada + ', sem nenhuma SAÍDA depois dela.';
+  if (ehEntrada && ultimo.ehEntrada) {
+    return 'O cavalo ' + reg.cavalo.toUpperCase() + ' já consta como DENTRO do pátio desde ' + dataUltimoBR + ' às ' + ultimo.hora + ultimo.origem + ', sem nenhuma saída depois disso.';
   }
-  if (ehSaida && ultimo.saida) {
-    return 'O cavalo ' + reg.cavalo.toUpperCase() + ' não tem nenhuma ENTRADA registrada depois da última saída, em ' + dataUltimoBR + ' às ' + ultimo.saida + '.';
+  if (ehSaida && !ultimo.ehEntrada) {
+    return 'O cavalo ' + reg.cavalo.toUpperCase() + ' já consta como FORA (na rua) desde ' + dataUltimoBR + ' às ' + ultimo.hora + ultimo.origem + ', sem nenhuma entrada depois disso.';
   }
   return null;
 }
@@ -2464,9 +2496,10 @@ async function addReg() {
   const alertaMovimento = verificarCoincidenciaMovimento(reg);
   if (alertaMovimento) {
     confirmarAcao(
-      'Confere?',
+      'ALERTA',
       alertaMovimento + ' Deseja registrar mesmo assim?',
-      (sim) => { if (sim) finalizarAddReg(reg, cavaloDigitado); }
+      (sim) => { if (sim) finalizarAddReg(reg, cavaloDigitado); else resetForm(); },
+      { alerta: true }
     );
     return;
   }
@@ -3515,8 +3548,14 @@ function removerAjustePatio(cavalo) {
 
 // ── Modal genérico de confirmação Sim/Não ─────────────
 let _confirmarCallback = null;
-function confirmarAcao(titulo, mensagem, callback) {
-  document.getElementById('confirmar-titulo').textContent = titulo;
+function confirmarAcao(titulo, mensagem, callback, opts) {
+  const elTitulo = document.getElementById('confirmar-titulo');
+  elTitulo.textContent = titulo;
+  if (opts && opts.alerta) {
+    elTitulo.style.cssText = 'color:#EF5350;width:100%;text-align:center';
+  } else {
+    elTitulo.style.cssText = '';
+  }
   document.getElementById('confirmar-mensagem').textContent = mensagem;
   _confirmarCallback = callback;
   document.getElementById('confirmar-overlay').classList.add('open');
