@@ -653,10 +653,13 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:2p
     </div>
     <div style="font-size:12px;color:#546E7A;margin-bottom:16px">Ações administrativas e exportação de dados</div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
-      <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
+      <div style="border:1px solid #C6282850;border-radius:var(--radius-lg);padding:14px;background:#8B1A1A0D;display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;color:#EF9A9A;font-size:11.5px;font-weight:700;letter-spacing:.03em;margin-bottom:2px">🔒 ÁREA RESTRITA, ACESSO SOMENTE PARA ADMINISTRADORES</div>
+        <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
+        <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
+        <button class="btn-csv" onclick="abrirEncerrarTurnoRemoto()" style="background:#8B1A1A20;border-color:#C6282840;color:#EF9A9A;padding:14px;font-size:14px;text-align:center">🔒 ENCERRAR TURNO REMOTAMENTE</button>
+      </div>
       <button class="btn-csv" id="btn-banco-placas" onclick="abrirBancoCavalos()" style="background:#6A1B9A20;border-color:#8E24AA40;color:#CE93D8;padding:14px;font-size:14px;text-align:center">🗄️ BANCO DE DADOS — PLACAS</button>
-      <button class="btn-csv" onclick="abrirEncerrarTurnoRemoto()" style="background:#8B1A1A20;border-color:#C6282840;color:#EF9A9A;padding:14px;font-size:14px;text-align:center">🔒 ENCERRAR TURNO REMOTAMENTE</button>
     </div>
   </div>
 </div>
@@ -3618,9 +3621,12 @@ function excluirPlacaBanco(cavalo) {
 
       if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
       const t = getTurno();
+      const porteiros = getPorteiros();
+      const p = porteiros.find(x => x.nome === t.nome);
 
-      pedirSenha('Excluir placa', 'Digite a senha para confirmar a exclusão de ' + key, async function(senha) {
-        if (senha !== '2026') { toast('Senha incorreta!'); return; }
+      pedirSenha('Excluir placa', 'Digite a senha de ' + t.nome + ' (ou a senha mestra) para confirmar a exclusão de ' + key, async function(senha) {
+        const senhaOk = (p && senha === p.senha) || await ehSenhaMestra(senha);
+        if (!senhaOk) { toast('Senha incorreta!'); return; }
         try {
           // 1) Remove do banco de placas cadastradas
           if (window._fbReady) {
@@ -3667,7 +3673,7 @@ function excluirPlacaBanco(cavalo) {
           console.error('Erro ao excluir placa ' + key + ':', e);
           toast('Erro ao excluir placa');
         }
-      });
+      }, true); // teclado alfanumérico — pode ser a senha mestra
     }
   );
 }
@@ -3681,17 +3687,9 @@ function fecharBancoEConfig() {
 
 
 function abrirBancoCavalos() {
-  pedirSenha(
-    'Área restrita',
-    'Acesso permitido somente com senha mestra. Digite a senha mestra para abrir o Banco de Dados — Placas.',
-    async function(senha) {
-      if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
-      document.getElementById('banco-cavalo-novo').value = '';
-      renderBancoCavalos();
-      document.getElementById('banco-overlay').classList.add('open');
-    },
-    true // teclado alfanumérico — a senha mestra tem letras e símbolos
-  );
+  document.getElementById('banco-cavalo-novo').value = '';
+  renderBancoCavalos();
+  document.getElementById('banco-overlay').classList.add('open');
 }
 
 function renderBancoCavalos() {
@@ -3734,8 +3732,9 @@ function cadastrarCavaloComSenha(cavalo, aposCadastrar, adicionarAoPatio = true)
   const porteiros = getPorteiros();
   const p = porteiros.find(x => x.nome === t.nome);
 
-  pedirSenha('Cadastrar placa', 'Digite a senha de ' + t.nome + ' para cadastrar ' + key + ' no banco de dados', async function(senha) {
-    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
+  pedirSenha('Cadastrar placa', 'Digite a senha de ' + t.nome + ' (ou a senha mestra) para cadastrar ' + key + ' no banco de dados', async function(senha) {
+    const senhaOk = (p && senha === p.senha) || await ehSenhaMestra(senha);
+    if (!senhaOk) { toast('Senha incorreta!'); return; }
     try {
       const registro = { cavalo: key, dataCadastro: hoje(), porteiro: t.nome };
       if (window._fbReady) {
@@ -3766,7 +3765,7 @@ function cadastrarCavaloComSenha(cavalo, aposCadastrar, adicionarAoPatio = true)
       console.error('Erro ao cadastrar placa:', e);
       toast('Erro ao cadastrar placa');
     }
-  });
+  }, true); // teclado alfanumérico — pode ser a senha mestra
 }
 
 function cadastrarCavaloBanco() {
