@@ -692,6 +692,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:2p
         <span>🏭 PÁTIO</span>
         <div style="display:flex;gap:14px;align-items:center">
           <button class="modal-close" onclick="abrirAjudaPatio()" title="Ajuda" style="font-size:16px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">?</button>
+          <button class="modal-close" onclick="atualizarPatioRuaEmMassa()" title="Atualizar Pátio e Rua (corrige cavalos desatualizados)" style="font-size:16px;padding:6px">↻</button>
           <button class="modal-close" onclick="abrirAjustePatio()" title="Ajuste manual" style="font-size:18px;padding:6px">⚙️</button>
           <button class="modal-close" onclick="document.getElementById('patio-overlay').classList.remove('open')" style="padding:6px">✕</button>
         </div>
@@ -710,6 +711,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:2p
         <span>🛣️ RUA</span>
         <div style="display:flex;gap:14px;align-items:center">
           <button class="modal-close" onclick="abrirAjudaRua()" title="Ajuda" style="font-size:16px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">?</button>
+          <button class="modal-close" onclick="atualizarPatioRuaEmMassa()" title="Atualizar Pátio e Rua (corrige cavalos desatualizados)" style="font-size:16px;padding:6px">↻</button>
           <button class="modal-close" onclick="document.getElementById('rua-overlay').classList.remove('open')" style="padding:6px">✕</button>
         </div>
       </div>
@@ -1034,10 +1036,16 @@ async function salvarReg(reg) {
     if (!window._fbReady) { salvar(); return; }
     await window._setDoc(window._doc('registros', String(reg.id)), reg);
     salvarMotoristaConhecido(reg.motorista);
-    atualizarEstadoCavalo(reg);
   } catch(e) {
     console.error('Erro ao salvar:', e);
     toast('Erro ao salvar no servidor');
+  } finally {
+    // Sempre tenta atualizar o estado do Pátio/Rua pra esse cavalo, mesmo se
+    // o Firestore estava indisponível no momento (a própria função só grava
+    // remotamente se a conexão estiver pronta) — assim uma instabilidade
+    // pontual de rede não deixa o cavalo "preso" mostrando como se nunca
+    // tivesse saído (ou entrado).
+    atualizarEstadoCavalo(reg);
   }
 }
 
@@ -1704,7 +1712,21 @@ async function atualizarEstadoCavalo(reg) {
   const key = reg.cavalo.toUpperCase();
   const dt = reg.data + (reg.entrada || reg.saida || '');
   const atual = estadoCavalosAtual[key];
-  if (atual && atual.dt >= dt) return; // já existe um estado igual ou mais recente
+  if (atual) {
+    const alternouTipo = !!atual.entrada !== !!reg.entrada; // entrada->saída ou saída->entrada
+    if (alternouTipo) {
+      // Ao ALTERNAR entrada/saída, compara só a DATA, não a hora. Isso evita
+      // um bug real: se a hora de um dos dois foi digitada errada (ex: uma
+      // entrada registrada com hora maior que a saída do mesmo dia), a
+      // comparação por hora bloqueava a atualização pra sempre, deixando o
+      // cavalo "preso" mostrando como se nunca tivesse saído (ou entrado).
+      if (reg.data < atual.data) return; // só bloqueia se for de fato uma data anterior
+    } else {
+      // Mesmo tipo (ex: corrigindo/duplicando uma entrada) — mantém a
+      // checagem normal por data+hora.
+      if (atual.dt >= dt) return;
+    }
+  }
   const novoEstado = { ...reg, dt };
   estadoCavalosAtual[key] = novoEstado; // aplica localmente já, o listener confirma depois
   try {
@@ -3855,8 +3877,76 @@ function abrirDetalheCartao(tipo, cavalo) {
   } else {
     corpo += `<div style="font-size:13px;color:#FFB74D;display:flex;gap:6px"><span style="width:16px;flex-shrink:0"></span><span>${r.destino||'—'}</span></div>`;
   }
+  corpo += `
+    <button onclick="recalcularEstadoCavaloUI('${r.cavalo}')" style="width:100%;margin-top:16px;padding:11px;background:#0D1F3C;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer">
+      ↻ Recalcular estado deste cavalo
+    </button>
+    <div style="font-size:10.5px;color:#546E7A;margin-top:6px;text-align:center">Use se este cavalo estiver aparecendo aqui por engano (ex: já saiu, mas continua no Pátio)</div>
+  `;
   document.getElementById('detalhe-cartao-corpo').innerHTML = corpo;
   document.getElementById('detalhe-cartao-overlay').classList.add('open');
+}
+
+// Refaz do zero o "estado atual" de um cavalo (última entrada/saída conhecida),
+// varrendo o histórico completo dele — chamado pelo botão "Recalcular estado"
+// no detalhe do cartão, quando o Pátio/Rua está mostrando um cavalo em
+// situação desatualizada (ex: já saiu, mas continua marcado como no pátio).
+async function recalcularEstadoCavaloUI(cavalo) {
+  if (!cavalo) return;
+  if (!window._fbReady) { toast('Sem conexão — tente novamente com internet'); return; }
+  toast('Recalculando...');
+  try {
+    await recalcularEstadoCavalo(cavalo);
+    document.getElementById('detalhe-cartao-overlay').classList.remove('open');
+    renderPatio();
+    renderRua();
+    toast('Estado de ' + cavalo + ' recalculado ✓');
+  } catch (err) {
+    console.error('Erro ao recalcular estado do cavalo:', err);
+    toast('Erro ao recalcular — tente de novo');
+  }
+}
+
+function dataMenosDias(dias) {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + dd;
+}
+
+// Atualização em massa: varre todos os registros dos últimos 60 dias, reúne
+// as placas que aparecem neles e recalcula o estado de cada uma do zero.
+// Serve pra corrigir de uma vez só qualquer cavalo que tenha ficado com o
+// Pátio/Rua desatualizado por bugs já corrigidos no código — depois de usada
+// uma vez (e com as correções já aplicadas), não deve ser mais necessária no
+// dia a dia, mas fica disponível como ferramenta de manutenção.
+async function atualizarPatioRuaEmMassa() {
+  if (!window._fbReady) { toast('Sem conexão — tente novamente com internet'); return; }
+  toast('Atualizando Pátio e Rua, aguarde...');
+  try {
+    const dataCorte = dataMenosDias(60);
+    const qUltimos60 = window._query(
+      window._col('registros'),
+      window._where('data', '>=', dataCorte)
+    );
+    const snap = await window._getDocs(qUltimos60);
+    const placas = new Set();
+    snap.forEach(d => {
+      const r = d.data();
+      if (r.cavalo && !r.standBy) placas.add(r.cavalo.toUpperCase());
+    });
+    for (const placa of placas) {
+      await recalcularEstadoCavalo(placa);
+    }
+    renderPatio();
+    renderRua();
+    toast(placas.size + ' cavalo(s) verificado(s) — Pátio e Rua atualizados ✓');
+  } catch (err) {
+    console.error('Erro ao atualizar Pátio/Rua em massa:', err);
+    toast('Erro ao atualizar — tente de novo');
+  }
 }
 
 // ── Rua — caminhões fora da empresa ───────────────
