@@ -653,12 +653,13 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:2p
     </div>
     <div style="font-size:12px;color:#546E7A;margin-bottom:16px">Ações administrativas e exportação de dados</div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="border:1px solid #C6282850;border-radius:var(--radius-lg);padding:14px;background:#8B1A1A0D;display:flex;flex-direction:column;gap:10px">
-        <div style="text-align:center;color:#EF9A9A;font-size:11.5px;font-weight:700;letter-spacing:.03em;margin-bottom:2px">🔒 ÁREA RESTRITA, ACESSO SOMENTE PARA ADMINISTRADORES</div>
+      <div style="border:2px solid #E53935;border-radius:var(--radius-lg);padding:14px;background:#8B1A1A26;box-shadow:0 0 0 1px #C6282840, 0 0 14px #C6282840;display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;color:#FF8A80;font-size:12px;font-weight:800;letter-spacing:.03em">🔒 ÁREA RESTRITA, ACESSO SOMENTE PARA ADMINISTRADORES</div>
         <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
         <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
         <button class="btn-csv" onclick="abrirEncerrarTurnoRemoto()" style="background:#8B1A1A20;border-color:#C6282840;color:#EF9A9A;padding:14px;font-size:14px;text-align:center">🔒 ENCERRAR TURNO REMOTAMENTE</button>
       </div>
+      <div style="text-align:center;font-size:10.5px;color:#546E7A;margin:2px 0">— fora da área restrita, consulta livre para todos —</div>
       <button class="btn-csv" id="btn-banco-placas" onclick="abrirBancoCavalos()" style="background:#6A1B9A20;border-color:#8E24AA40;color:#CE93D8;padding:14px;font-size:14px;text-align:center">🗄️ BANCO DE DADOS — PLACAS</button>
     </div>
   </div>
@@ -3619,14 +3620,8 @@ function excluirPlacaBanco(cavalo) {
     (sim) => {
       if (!sim) return;
 
-      if (!euEstouLogado()) { turnoAtivo() ? toast('Turno ativo em outro dispositivo — ' + getTurno().nome) : (toast('Faça login para iniciar o turno'), abrirLoginTurno()); return; }
-      const t = getTurno();
-      const porteiros = getPorteiros();
-      const p = porteiros.find(x => x.nome === t.nome);
-
-      pedirSenha('Excluir placa', 'Digite a senha de ' + t.nome + ' (ou a senha mestra) para confirmar a exclusão de ' + key, async function(senha) {
-        const senhaOk = (p && senha === p.senha) || await ehSenhaMestra(senha);
-        if (!senhaOk) { toast('Senha incorreta!'); return; }
+      pedirSenha('Excluir placa', 'Ação restrita — digite a senha mestra para confirmar a exclusão de ' + key, async function(senha) {
+        if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
         try {
           // 1) Remove do banco de placas cadastradas
           if (window._fbReady) {
@@ -3646,7 +3641,7 @@ function excluirPlacaBanco(cavalo) {
             motivo: 'Placa excluída do banco de dados (venda/baixa)',
             data: hoje(),
             hora: horaAgora(),
-            porteiro: t.nome
+            porteiro: (getTurno() && getTurno().nome) || 'Admin (senha mestra)'
           };
           if (window._fbReady) {
             await window._setDoc(window._doc('ajustesPatio', key), ajuste);
