@@ -1475,11 +1475,11 @@ function abrirEncerrarTurnoRemoto() {
 // ── Gerenciar Porteiros ────────────────────────────────
 function abrirGerenciarPorteiros() {
   document.getElementById('login-overlay').classList.remove('open');
-  pedirSenha('Gerenciar Porteiros', 'Digite a senha para acessar', function(senha) {
-    if (senha !== '1057') { toast('Senha incorreta!'); return; }
+  pedirSenha('Gerenciar Porteiros', 'Área restrita — digite a senha mestra para acessar', async function(senha) {
+    if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
     renderPorteirosLista();
     document.getElementById('porteiros-overlay').classList.add('open');
-  });
+  }, true); // teclado alfanumérico — a senha mestra tem letras e símbolos
 }
 
 function fecharGerenciarPorteiros() {
