@@ -1449,8 +1449,8 @@ function abrirEncerrarTurnoRemoto() {
   const nomeAtual = getTurno().nome;
   document.getElementById('config-overlay').classList.remove('open');
   pedirSenha(
-    'Encerrar turno remotamente',
-    'Turno ativo agora: ' + nomeAtual + '. Digite a SENHA MESTRA para encerrar (uso em caso de aparelho perdido, roubado ou com defeito).',
+    'Área restrita',
+    'Acesso permitido somente com senha mestra. Turno ativo agora: ' + nomeAtual + '. Digite a senha mestra para encerrar (uso em caso de aparelho perdido, roubado ou com defeito).',
     async function(senha) {
       if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
       try {
@@ -3253,25 +3253,27 @@ function cancelarSenha() {
 
 // ── Backup ──────────────────────────────────────────
 function solicitarSenhaExportar() {
-  const t = getTurno();
-  if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
-  const porteiros = getPorteiros();
-  const p = porteiros.find(x => x.nome === t.nome);
-  pedirSenha('Exportar CSV', 'Digite a senha de ' + t.nome + ' para exportar', function(senha) {
-    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
-    exportCSV();
-  });
+  pedirSenha(
+    'Área restrita',
+    'Acesso permitido somente com senha mestra. Digite a senha mestra para exportar CSV.',
+    async function(senha) {
+      if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
+      exportCSV();
+    },
+    true // teclado alfanumérico — a senha mestra tem letras e símbolos
+  );
 }
 
 function solicitarSenhaBackup() {
-  const t = getTurno();
-  if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
-  const porteiros = getPorteiros();
-  const p = porteiros.find(x => x.nome === t.nome);
-  pedirSenha('Fazer backup', 'Digite a senha de ' + t.nome + ' para exportar', function(senha) {
-    if (!p || senha !== p.senha) { toast('Senha incorreta!'); return; }
-    fazerBackup();
-  });
+  pedirSenha(
+    'Área restrita',
+    'Acesso permitido somente com senha mestra. Digite a senha mestra para fazer backup.',
+    async function(senha) {
+      if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
+      fazerBackup();
+    },
+    true // teclado alfanumérico — a senha mestra tem letras e símbolos
+  );
 }
 
 async function fazerBackup() {
@@ -3679,9 +3681,17 @@ function fecharBancoEConfig() {
 
 
 function abrirBancoCavalos() {
-  document.getElementById('banco-cavalo-novo').value = '';
-  renderBancoCavalos();
-  document.getElementById('banco-overlay').classList.add('open');
+  pedirSenha(
+    'Área restrita',
+    'Acesso permitido somente com senha mestra. Digite a senha mestra para abrir o Banco de Dados — Placas.',
+    async function(senha) {
+      if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
+      document.getElementById('banco-cavalo-novo').value = '';
+      renderBancoCavalos();
+      document.getElementById('banco-overlay').classList.add('open');
+    },
+    true // teclado alfanumérico — a senha mestra tem letras e símbolos
+  );
 }
 
 function renderBancoCavalos() {
