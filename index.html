@@ -692,7 +692,6 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:2p
         <span>🏭 PÁTIO</span>
         <div style="display:flex;gap:14px;align-items:center">
           <button class="modal-close" onclick="abrirAjudaPatio()" title="Ajuda" style="font-size:16px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">?</button>
-          <button class="modal-close" onclick="atualizarPatioRuaEmMassa()" title="Atualizar Pátio e Rua (corrige cavalos desatualizados)" style="font-size:16px;padding:6px">↻</button>
           <button class="modal-close" onclick="abrirAjustePatio()" title="Ajuste manual" style="font-size:18px;padding:6px">⚙️</button>
           <button class="modal-close" onclick="document.getElementById('patio-overlay').classList.remove('open')" style="padding:6px">✕</button>
         </div>
@@ -711,7 +710,6 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:2p
         <span>🛣️ RUA</span>
         <div style="display:flex;gap:14px;align-items:center">
           <button class="modal-close" onclick="abrirAjudaRua()" title="Ajuda" style="font-size:16px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">?</button>
-          <button class="modal-close" onclick="atualizarPatioRuaEmMassa()" title="Atualizar Pátio e Rua (corrige cavalos desatualizados)" style="font-size:16px;padding:6px">↻</button>
           <button class="modal-close" onclick="document.getElementById('rua-overlay').classList.remove('open')" style="padding:6px">✕</button>
         </div>
       </div>
@@ -3780,6 +3778,12 @@ function abrirPatio() {
 // ser reescrito). Serve para casos como: descarregar no pátio, ou trocar a
 // carga para outra carreta parada — o log de entrada continua íntegro.
 function alterarStatusPatio(cavalo, situacaoAtual) {
+  // Visitante em modo somente-leitura (sem senha de porteiro): não abre o
+  // modal de login por cima da lista — só avisa que a ação é restrita.
+  // Antes disso, quem só tinha a senha de leitura acabava caindo numa tela
+  // de login sem saída (sem ter a senha de nenhum porteiro), dando a
+  // impressão de que o app tinha travado.
+  if (isReadOnly()) { toast('Alterar status é uma ação restrita a porteiros logados'); return; }
   const novoStatus = situacaoAtual === 'carregado' ? 'vazio' : 'carregado';
   const t = getTurno();
   if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
@@ -3845,19 +3849,20 @@ function renderPatio() {
   const total = patio.length;
   if (resumoEl) resumoEl.textContent = total + ' caminh' + (total !== 1 ? 'ões' : 'ão') + ' no pátio';
 
-  el.innerHTML = patio.map(r => `
-    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#FDD835' : '#1565C030'};border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('patio', '${r.cavalo}')">
+  el.innerHTML = patio.map(r => { const cav = (r.cavalo||'').replace(/'/g,"\\'"); return `
+    <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#FDD835' : '#1565C030'};border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('patio', '${cav}')">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;color:#FFD600;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
-      <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;cursor:pointer" onclick="event.stopPropagation(); alterarStatusPatio('${r.cavalo}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
+      <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;cursor:pointer" onclick="event.stopPropagation(); alterarStatusPatio('${cav}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
-  `).join('');
+  `; }).join('');
 }
 
 // Abre a janela pequena com os detalhes do cartão (Pátio ou Rua) para a placa tocada
 function abrirDetalheCartao(tipo, cavalo) {
+  try {
   const lista = tipo === 'patio' ? _patioAtual : _ruaAtual;
   const r = (lista || []).find(x => x.cavalo === cavalo);
-  if (!r) return;
+  if (!r) { toast('Não foi possível abrir este registro — atualize a tela e tente de novo'); return; }
 
   document.getElementById('detalhe-cartao-placa').textContent = r.cavalo;
 
@@ -3877,14 +3882,20 @@ function abrirDetalheCartao(tipo, cavalo) {
   } else {
     corpo += `<div style="font-size:13px;color:#FFB74D;display:flex;gap:6px"><span style="width:16px;flex-shrink:0"></span><span>${r.destino||'—'}</span></div>`;
   }
-  corpo += `
-    <button onclick="recalcularEstadoCavaloUI('${r.cavalo}')" style="width:100%;margin-top:16px;padding:11px;background:#0D1F3C;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer">
-      ↻ Recalcular estado deste cavalo
-    </button>
-    <div style="font-size:10.5px;color:#546E7A;margin-top:6px;text-align:center">Use se este cavalo estiver aparecendo aqui por engano (ex: já saiu, mas continua no Pátio)</div>
-  `;
+  if (!isReadOnly()) {
+    corpo += `
+      <button onclick="recalcularEstadoCavaloUI('${r.cavalo.replace(/'/g,"\\'")}')" style="width:100%;margin-top:16px;padding:11px;background:#0D1F3C;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer">
+        ↻ Recalcular estado deste cavalo
+      </button>
+      <div style="font-size:10.5px;color:#546E7A;margin-top:6px;text-align:center">Use se este cavalo estiver aparecendo aqui por engano (ex: já saiu, mas continua no Pátio)</div>
+    `;
+  }
   document.getElementById('detalhe-cartao-corpo').innerHTML = corpo;
   document.getElementById('detalhe-cartao-overlay').classList.add('open');
+  } catch (err) {
+    console.error('Erro ao abrir detalhe do cartão:', err);
+    toast('Erro ao abrir o registro — tente de novo');
+  }
 }
 
 // Refaz do zero o "estado atual" de um cavalo (última entrada/saída conhecida),
@@ -4009,12 +4020,12 @@ function renderRua() {
   const total = rua.length;
   if (resumoEl) resumoEl.textContent = total + ' caminh' + (total !== 1 ? 'ões' : 'ão') + ' na rua';
 
-  el.innerHTML = rua.map(r => `
-    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('rua', '${r.cavalo}')">
+  el.innerHTML = rua.map(r => { const cav = (r.cavalo||'').replace(/'/g,"\\'"); return `
+    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('rua', '${cav}')">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;color:#FFD600;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
-  `).join('');
+  `; }).join('');
 }
 
 // Confirma a saída de um caminhão em Stand By com o horário atual
