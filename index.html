@@ -3116,7 +3116,13 @@ async function renderHistorico() {
       }
       if (!_modoExatoValido()) return; // campos mudaram enquanto buscava
       const prefixo = mes ? ano + '-' + mes : ano;
-      const lista = listaCompleta.filter(r => r.data && r.data.startsWith(prefixo));
+      const lista = listaCompleta
+        .filter(r => r.data && r.data.startsWith(prefixo))
+        .sort((a,b) => {
+          const da = a.data+(a.entrada||a.saida||'');
+          const db = b.data+(b.entrada||b.saida||'');
+          return da>db?1:da<db?-1:0;
+        });
       if (!lista.length) {
         el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>Nenhum registro encontrado</p></div>';
         return;
