@@ -1717,12 +1717,18 @@ async function atualizarEstadoCavalo(reg) {
   if (atual) {
     const alternouTipo = !!atual.entrada !== !!reg.entrada; // entrada->saída ou saída->entrada
     if (alternouTipo) {
-      // Ao ALTERNAR entrada/saída, compara só a DATA, não a hora. Isso evita
-      // um bug real: se a hora de um dos dois foi digitada errada (ex: uma
-      // entrada registrada com hora maior que a saída do mesmo dia), a
-      // comparação por hora bloqueava a atualização pra sempre, deixando o
-      // cavalo "preso" mostrando como se nunca tivesse saído (ou entrado).
-      if (reg.data < atual.data) return; // só bloqueia se for de fato uma data anterior
+      // Ao ALTERNAR entrada/saída, a ordem que realmente importa é a ordem em
+      // que os registros foram CRIADOS na portaria (reg.id, timestamp real),
+      // não a hora digitada manualmente. Isso resolve dois problemas:
+      // 1) uma hora digitada errada não trava mais as atualizações seguintes
+      //    para sempre (bug antigo que a comparação por data já evitava);
+      // 2) um evento mais ANTIGO que só chega ao servidor depois (ex: rede
+      //    instável, gravação em fila offline) não sobrescreve por engano um
+      //    evento mais NOVO do mesmo dia que já tinha sido aplicado — foi
+      //    esse o bug real: a saída das 15:51 sobrescrevendo a entrada das
+      //    19:54 por ter sido processada depois dela.
+      if (atual.id && reg.id && reg.id < atual.id) return; // este evento foi criado antes do que já está salvo — ignora
+      if ((!atual.id || !reg.id) && reg.data < atual.data) return; // fallback para dados antigos sem id
     } else {
       // Mesmo tipo (ex: corrigindo/duplicando uma entrada) — mantém a
       // checagem normal por data+hora.
@@ -1757,7 +1763,11 @@ async function recalcularEstadoCavalo(cavalo) {
     const maisRecente = validos.reduce((a, b) => {
       const da = a.data + (a.entrada || a.saida || '');
       const db = b.data + (b.entrada || b.saida || '');
-      return db > da ? b : a;
+      if (da !== db) return db > da ? b : a;
+      // Empate na data+hora digitada (ex: hora trocada por engano) — desempata
+      // pelo horário real de criação do registro (id), não pelo texto digitado.
+      if (a.id && b.id) return b.id > a.id ? b : a;
+      return b;
     });
     const dt = maisRecente.data + (maisRecente.entrada || maisRecente.saida || '');
     const novoEstado = { ...maisRecente, dt };
