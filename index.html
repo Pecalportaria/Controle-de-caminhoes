@@ -2529,6 +2529,22 @@ async function addReg() {
     destinoPendente: !!vals.destinoPendente
   };
 
+  // 1º alerta: placa que não consta no banco de dados de placas cadastradas.
+  // Pergunta ANTES de gravar; se o porteiro não quiser continuar, nada é salvo.
+  if (cavaloDigitado && !cavaloExisteNoBanco(cavaloDigitado)) {
+    confirmarAcao(
+      'ALERTA — Placa não cadastrada',
+      'A placa ' + cavaloDigitado.toUpperCase() + ' não consta no cadastro de placas. Deseja continuar o registro?',
+      (sim) => { if (sim) continuarAddReg(reg, cavaloDigitado); else resetForm(); },
+      { alerta: true }
+    );
+    return;
+  }
+  await continuarAddReg(reg, cavaloDigitado);
+}
+
+// 2º alerta (entrada/saída repetida) e gravação final do registro.
+async function continuarAddReg(reg, cavaloDigitado) {
   const alertaMovimento = verificarCoincidenciaMovimento(reg);
   if (alertaMovimento) {
     confirmarAcao(
