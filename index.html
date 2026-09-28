@@ -2367,6 +2367,16 @@ async function avancarStep() {
   }
   if (stepAtual===2 && !vals.data) { toast('Informe a data'); return; }
   if (stepAtual===3 && (!vals.cavalo||vals.cavalo.length!==4)) { toast('Placa do cavalo: 4 caracteres'); return; }
+  if (stepAtual===3 && vals.cavalo.toUpperCase() !== window._placaAprovadaSemCadastro && !cavaloExisteNoBanco(vals.cavalo)) {
+    // Placa fora do cadastro: alerta + senha ANTES de ir para o motorista
+    document.activeElement && document.activeElement.blur();
+    const placa = vals.cavalo;
+    confirmarPlacaNaoCadastrada(placa, () => {
+      window._placaAprovadaSemCadastro = placa.toUpperCase();
+      avancarStep();
+    });
+    return;
+  }
   if (stepAtual===3) { window._sugestoes = {}; await aplicarSugestoesCompleto(vals.cavalo); sugerirInverso(vals.cavalo); }
   if (stepAtual===4 && !vals.motorista) { toast('Informe o motorista'); return; }
   if (stepAtual===5) {
@@ -2439,6 +2449,7 @@ function setEditSit(s) {
 
 function resetForm() {
   Object.keys(vals).forEach(k => vals[k]='');
+  window._placaAprovadaSemCadastro = ''; // próximo registro volta a pedir confirmação
   vals.data = hoje();
   vals.standBy = false;
   vals.carretaPendente = false;
@@ -2529,21 +2540,43 @@ async function addReg() {
     destinoPendente: !!vals.destinoPendente
   };
 
-  // 1º alerta: placa que não consta no banco de dados de placas cadastradas.
-  // Pergunta ANTES de gravar; se o porteiro não quiser continuar, nada é salvo.
-  if (cavaloDigitado && !cavaloExisteNoBanco(cavaloDigitado)) {
-    confirmarAcao(
-      'ALERTA — Placa não cadastrada',
-      'A placa ' + cavaloDigitado.toUpperCase() + ' não consta no cadastro de placas. Deseja continuar o registro?',
-      (sim) => { if (sim) continuarAddReg(reg, cavaloDigitado); else resetForm(); },
-      { alerta: true }
-    );
-    return;
-  }
   await continuarAddReg(reg, cavaloDigitado);
 }
 
-// 2º alerta (entrada/saída repetida) e gravação final do registro.
+// Alerta de placa fora do cadastro — usado na etapa do cavalo (avancarStep),
+// logo após digitar a placa e antes de seguir para o motorista.
+// Sim -> exige a senha do porteiro logado (ou a senha mestra), evitando seguir
+// com uma placa digitada por engano; Não/cancelar -> permanece na etapa da
+// placa para corrigir. Senha errada -> pergunta de novo sem perder o digitado.
+function confirmarPlacaNaoCadastrada(cavalo, aoAprovar) {
+  confirmarAcao(
+    'ALERTA — Placa não cadastrada',
+    'A placa ' + cavalo.toUpperCase() + ' não consta no cadastro de placas. Deseja continuar o registro?',
+    (sim) => { if (sim) pedirSenhaPlacaNaoCadastrada(cavalo, aoAprovar); },
+    { alerta: true }
+  );
+}
+
+function pedirSenhaPlacaNaoCadastrada(cavalo, aoAprovar) {
+  const t = getTurno();
+  const p = t ? getPorteiros().find(x => x.nome === t.nome) : null;
+  pedirSenha(
+    'Confirmar placa não cadastrada',
+    'Digite a senha ' + (t ? 'de ' + t.nome + ' ' : '') + '(ou a senha mestra) para registrar a placa ' + cavalo.toUpperCase() + ' mesmo sem cadastro',
+    async function(senha) {
+      const ok = (p && senha === p.senha) || await ehSenhaMestra(senha);
+      if (!ok) {
+        toast('Senha incorreta — tente novamente');
+        pedirSenhaPlacaNaoCadastrada(cavalo, aoAprovar);
+        return;
+      }
+      aoAprovar();
+    },
+    true // teclado alfanumérico — pode ser a senha mestra
+  );
+}
+
+// Alerta de entrada/saída repetida e gravação final do registro.
 async function continuarAddReg(reg, cavaloDigitado) {
   const alertaMovimento = verificarCoincidenciaMovimento(reg);
   if (alertaMovimento) {
