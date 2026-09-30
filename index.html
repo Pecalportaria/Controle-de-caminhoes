@@ -527,7 +527,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin-left:4px;padding:2p
     <div class="form-card">
       <div class="form-row"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="r-cavalo" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
       <div class="form-row" style="position:relative"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="r-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div><span id="r-carreta-pendente-aviso" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🕓</span></div>
-      <div class="form-row"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="r-motorista" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
+      <div class="form-row"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="r-motorista" autocomplete="off" onkeydown="this._ultimaTecla=event.key" oninput="autocompletarMotoristaReg(this)"></div></div>
       <div class="form-row"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="r-data" onclick="this.showPicker&&this.showPicker()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"></div></div>
       <div class="form-row">
         <div class="form-label">Horário</div>
