@@ -4217,9 +4217,21 @@ function posicionarSpotlight(targetId) {
     r.width = r.right - r.left;
     r.height = r.bottom - r.top;
     const pad = 8;
-    spot.style.opacity = '1';
-    spot.style.left = (r.left - pad) + 'px';
-    spot.style.top = (r.top - pad) + 'px';
+    // No desktop (>=701px), #app-shell ganha um transform (CSS) só pra criar
+    // uma nova "containing block" e manter os overlays position:fixed presos
+    // dentro da moldura estreita do app, em vez de se espalharem pela janela
+    // inteira do navegador. Só que isso muda a referência de quem usa
+    // position:fixed lá dentro: left/top passam a ser relativos ao #app-shell,
+    // não mais à janela. getBoundingClientRect() continua devolvendo
+    // coordenadas relativas À JANELA — então, sem este ajuste, o destaque do
+    // tour calculava a posição certa e aplicava no lugar errado, ficando bem
+    // deslocado pra direita (ou fora da tela) em qualquer monitor de desktop.
+    // Convertendo pra coordenadas relativas ao #app-shell aqui resolve nos
+    // dois casos: no desktop corrige o deslocamento; no celular não muda nada
+    // (o #app-shell começa em 0,0 da janela, sem transform).
+    const shellRect = document.getElementById('app-shell').getBoundingClientRect();
+    spot.style.left = (r.left - shellRect.left - pad) + 'px';
+    spot.style.top = (r.top - shellRect.top - pad) + 'px';
     spot.style.width = (r.width + pad * 2) + 'px';
     spot.style.height = (r.height + pad * 2) + 'px';
 
