@@ -449,14 +449,25 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
         oninput="autocompletarMotoristaHist(this)"
         style="flex:1;padding:7px 10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:13px;background:#0D1F3C;color:#fff;outline:none">
     </div>
-    <div style="display:flex;gap:8px">
-      <select id="hist-mes" onchange="renderHistorico()"
-        style="flex:1;padding:10px 12px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:13px;background:#0D1F3C;color:#fff;outline:none">
-      </select>
-      <select id="hist-ano" onchange="renderHistorico()"
-        style="flex:1;padding:10px 12px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:13px;background:#0D1F3C;color:#fff;outline:none">
-      </select>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;align-items:center;flex:1;min-width:132px">
+        <span style="font-size:10px;color:#546E7A;font-weight:600;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em">De</span>
+        <span style="position:relative;flex:1">
+          <input type="date" id="hist-data-de" onchange="renderHistorico()" onclick="this.showPicker&&this.showPicker()"
+            style="width:100%;box-sizing:border-box;padding:9px 26px 9px 8px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:12.5px;background:#0D1F3C;color:#fff;outline:none">
+          <svg class="icone-calendario" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#90CAF9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+        </span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex:1;min-width:132px">
+        <span style="font-size:10px;color:#546E7A;font-weight:600;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em">Até</span>
+        <span style="position:relative;flex:1">
+          <input type="date" id="hist-data-ate" onchange="renderHistorico()" onclick="this.showPicker&&this.showPicker()"
+            style="width:100%;box-sizing:border-box;padding:9px 26px 9px 8px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:12.5px;background:#0D1F3C;color:#fff;outline:none">
+          <svg class="icone-calendario" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#90CAF9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+        </span>
+      </div>
     </div>
+    <div style="font-size:10px;color:#546E7A;margin-top:5px">Sem data selecionada, mostra os últimos 30 dias</div>
   </div>
   <div class="lista-body" id="historico-body"></div>
 </div>
@@ -2640,7 +2651,6 @@ function showTab(t) {
   }
   if (t==='historico') {
     document.getElementById('tab-historico').style.height = avail + 'px';
-    initHistoricoFiltros();
     renderHistorico();
   }
   if (t==='registrar') {
@@ -2693,20 +2703,18 @@ function _modoExatoValido() {
 }
 
 // Abrir histórico a partir de um clique em card (cavalo/motorista/carreta) —
-// por padrão mostra só o MÊS ATUAL; o usuário pode trocar mês/ano ou escolher
-// "Todo o ano" nos próprios seletores da tela pra ver mais, sem custo extra
-// de leitura (reaproveita a mesma busca exata já feita).
+// por padrão mostra os ÚLTIMOS 30 DIAS; o usuário pode escolher um período De/Até
+// pra ver mais, sem custo extra de leitura (reaproveita a mesma busca exata já feita).
 function abrirHistoricoExato(campo, valor, idCampoInput) {
   showTab('historico');
   setTimeout(() => {
     ['hist-cavalo','hist-motorista','hist-carreta'].forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById(idCampoInput).value = valor;
     _historicoModoExato = { campo, valor };
-    const hoje = new Date();
-    const selMes = document.getElementById('hist-mes');
-    const selAno = document.getElementById('hist-ano');
-    if (selMes) selMes.value = String(hoje.getMonth()+1).padStart(2,'0');
-    if (selAno) selAno.value = String(hoje.getFullYear());
+    const deInp = document.getElementById('hist-data-de');
+    const ateInp = document.getElementById('hist-data-ate');
+    if (deInp) deInp.value = '';
+    if (ateInp) ateInp.value = '';
     renderHistorico();
   }, 50);
 }
@@ -3098,46 +3106,31 @@ async function exportCSV() {
   a.click(); toast('CSV exportado!');
 }
 
-// Init
 // ── Histórico ────────────────────────────────────────
-function initHistoricoFiltros() {
-  // Gera um intervalo fixo de anos (atual + 4 anteriores), independente do
-  // que está em `regs` (só 30 dias) — senão anos mais antigos nem apareceriam
-  // como opção, mesmo a busca por trás suportando qualquer ano.
-  const anoAtualNum = new Date().getFullYear();
-  const anos = [];
-  for (let a = anoAtualNum; a >= anoAtualNum - 4; a--) anos.push(String(a));
-  const anoAtual = String(anoAtualNum);
-  const selAno = document.getElementById('hist-ano');
-  if (selAno) selAno.innerHTML = anos.map(a => '<option value="'+a+'"'+(a===anoAtual?' selected':'')+'>'+a+'</option>').join('');
-  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  const mesAtual = new Date().getMonth();
-  const selMes = document.getElementById('hist-mes');
-  if (selMes) selMes.innerHTML =
-    '<option value="">Todo o ano</option>' +
-    meses.map((m,i) => '<option value="'+String(i+1).padStart(2,'0')+'"'+(i===mesAtual?' selected':'')+'>'+m+'</option>').join('');
-}
-
-// Cache de buscas do histórico por período (ano ou ano-mês), pra não repetir
+// Cache de buscas do histórico por período (chave ini_fimExclusivo), pra não repetir
 // a mesma leitura no Firestore ao alternar entre nome/placa com o mesmo período.
 const _cacheHistoricoPorPeriodo = {};
 
-function limitesDoPeriodo(ano, mes) {
-  if (mes) {
-    const ini = ano + '-' + mes + '-01';
-    let proxMes = String(Number(mes)+1).padStart(2,'0');
-    let proxAno = ano;
-    if (proxMes === '13') { proxMes = '01'; proxAno = String(Number(ano)+1); }
-    const fimExclusivo = proxAno + '-' + proxMes + '-01';
-    return { ini, fimExclusivo };
-  }
-  return { ini: ano + '-01-01', fimExclusivo: (Number(ano)+1) + '-01-01' };
+// Lê o período escolhido nos campos "De"/"Até" do Histórico. Sem nada
+// selecionado em nenhum dos dois, cai sempre nos últimos 30 dias — a MESMA
+// janela que o listener ao vivo já mantém localmente (LIMITE_DIAS_LISTENER_GLOBAL),
+// então o caso padrão não gera NENHUMA leitura extra no Firestore (ver uso
+// logo abaixo, em renderHistorico). "Até" é inclusivo: internamente vira o
+// dia seguinte, pra pegar os registros do próprio dia final também.
+function limitesDoPeriodo() {
+  const deVal = document.getElementById('hist-data-de')?.value || '';
+  const ateVal = document.getElementById('hist-data-ate')?.value || '';
+  const ini = deVal || dataCorteLocal();
+  const fimBase = ateVal || hoje();
+  const d = new Date(fimBase + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  const fimExclusivo = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  return { ini, fimExclusivo };
 }
 
-async function buscarRegistrosPorPeriodo(ano, mes) {
-  const prefixo = mes ? ano + '-' + mes : ano;
-  if (_cacheHistoricoPorPeriodo[prefixo]) return _cacheHistoricoPorPeriodo[prefixo];
-  const { ini, fimExclusivo } = limitesDoPeriodo(ano, mes);
+async function buscarRegistrosPorPeriodo(ini, fimExclusivo) {
+  const chave = ini + '_' + fimExclusivo;
+  if (_cacheHistoricoPorPeriodo[chave]) return _cacheHistoricoPorPeriodo[chave];
   const qPeriodo = window._query(
     window._col('registros'),
     window._where('data', '>=', ini),
@@ -3146,7 +3139,7 @@ async function buscarRegistrosPorPeriodo(ano, mes) {
   );
   const snap = await window._getDocs(qPeriodo);
   const lista = snap.docs.map(d => { const data = d.data(); return { ...data, id: data.id || Number(d.id) }; });
-  _cacheHistoricoPorPeriodo[prefixo] = lista;
+  _cacheHistoricoPorPeriodo[chave] = lista;
   return lista;
 }
 
@@ -3154,8 +3147,8 @@ async function renderHistorico() {
   const cavalo   = (document.getElementById('hist-cavalo')?.value||'').trim().toUpperCase();
   const motorista= (document.getElementById('hist-motorista')?.value||'').trim().toUpperCase();
   const carreta  = (document.getElementById('hist-carreta')?.value||'').trim().toUpperCase();
-  const mes      = document.getElementById('hist-mes')?.value || '';
-  const ano      = document.getElementById('hist-ano')?.value || '';
+  const dataDeVal  = document.getElementById('hist-data-de')?.value || '';
+  const dataAteVal = document.getElementById('hist-data-ate')?.value || '';
   const el       = document.getElementById('historico-body');
   if (!el) return;
 
@@ -3164,10 +3157,12 @@ async function renderHistorico() {
     return;
   }
 
+  const { ini, fimExclusivo } = limitesDoPeriodo();
+
   // Modo exato (veio de um clique em card): reaproveita a busca por igualdade
   // já feita/cacheada pra esse cavalo/motorista/carreta específico, e só
-  // filtra por mês/ano no cliente — sem nova consulta ao Firestore ao trocar
-  // o período nos seletores.
+  // filtra pelo período no cliente — sem nova consulta ao Firestore ao trocar
+  // as datas De/Até.
   if (_modoExatoValido()) {
     const { campo, valor } = _historicoModoExato;
     if (window._fbReady) {
@@ -3181,9 +3176,8 @@ async function renderHistorico() {
         return;
       }
       if (!_modoExatoValido()) return; // campos mudaram enquanto buscava
-      const prefixo = mes ? ano + '-' + mes : ano;
       const lista = listaCompleta
-        .filter(r => r.data && r.data.startsWith(prefixo))
+        .filter(r => r.data && r.data >= ini && r.data < fimExclusivo)
         .sort((a,b) => {
           const da = a.data+(a.entrada||a.saida||'');
           const db = b.data+(b.entrada||b.saida||'');
@@ -3201,14 +3195,14 @@ async function renderHistorico() {
 
   // Se o período pedido tiver alguma data fora da janela "ao vivo" (30 dias),
   // busca no Firestore em vez de usar só o array local (que não guarda mais
-  // o histórico inteiro). Período totalmente dentro da janela usa o local,
-  // rápido e sem gasto extra.
-  const { ini } = limitesDoPeriodo(ano, mes);
+  // o histórico inteiro). Período totalmente dentro da janela — inclusive o
+  // padrão "nada selecionado" (últimos 30 dias) — usa o local, sem gasto
+  // extra de leitura.
   let fonte;
   if (window._fbReady && ini < dataCorteLocal()) {
     el.innerHTML = '<div class="empty"><div class="empty-icon">🕘</div><p>Buscando histórico...</p></div>';
     try {
-      fonte = await buscarRegistrosPorPeriodo(ano, mes);
+      fonte = await buscarRegistrosPorPeriodo(ini, fimExclusivo);
     } catch (err) {
       console.error('Erro ao buscar histórico:', err);
       el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Não foi possível buscar o histórico agora. Tente novamente.</p></div>';
@@ -3218,20 +3212,19 @@ async function renderHistorico() {
     const aindaValido = (document.getElementById('hist-cavalo')?.value||'').trim().toUpperCase() === cavalo
       && (document.getElementById('hist-motorista')?.value||'').trim().toUpperCase() === motorista
       && (document.getElementById('hist-carreta')?.value||'').trim().toUpperCase() === carreta
-      && (document.getElementById('hist-mes')?.value||'') === mes
-      && (document.getElementById('hist-ano')?.value||'') === ano;
+      && (document.getElementById('hist-data-de')?.value||'') === dataDeVal
+      && (document.getElementById('hist-data-ate')?.value||'') === dataAteVal;
     if (!aindaValido) return;
   } else {
     fonte = regs;
   }
 
-  const prefixo = mes ? ano + '-' + mes : ano;
   const lista = fonte
     .filter(r => {
       const matchCavalo   = !cavalo   || (r.cavalo   && r.cavalo.toUpperCase().includes(cavalo));
       const matchMotorista= !motorista|| (r.motorista&& r.motorista.toUpperCase().includes(motorista));
       const matchCarreta  = !carreta  || (r.carreta  && r.carreta.toUpperCase().includes(carreta));
-      const matchData     = r.data && r.data.startsWith(prefixo);
+      const matchData     = r.data && r.data >= ini && r.data < fimExclusivo;
       return matchCavalo && matchMotorista && matchCarreta && matchData;
     })
     .sort((a,b) => {
