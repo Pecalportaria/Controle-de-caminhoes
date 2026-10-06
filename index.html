@@ -445,7 +445,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
       <input type="text" id="hist-motorista" placeholder="Nome do motorista"
         autocomplete="off"
         onfocus="_historicoModoExato=null;this.value='';document.getElementById('hist-cavalo').value='';document.getElementById('hist-carreta').value='';renderHistorico()"
-        onkeydown="this._ultimaTecla=event.key"
+        onkeydown="this._ultimaTecla=event.key;if(event.key==='Enter'){event.preventDefault();renderHistorico();this.blur()}"
         oninput="autocompletarMotoristaHist(this)"
         style="flex:1;padding:7px 10px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:13px;background:#0D1F3C;color:#fff;outline:none">
     </div>
@@ -672,11 +672,27 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
       <div style="border:2px solid #E53935;border-radius:var(--radius-lg);padding:14px;background:#8B1A1A26;box-shadow:0 0 0 1px #C6282840, 0 0 14px #C6282840;display:flex;flex-direction:column;gap:10px">
         <div style="text-align:center;color:#FF8A80;font-size:12px;font-weight:800;letter-spacing:.03em">🔒 ÁREA RESTRITA, ACESSO SOMENTE PARA ADMINISTRADORES</div>
         <button class="btn-csv" onclick="solicitarSenhaBackup()" style="background:#1565C020;padding:14px;font-size:14px;text-align:center">💾 BACKUP</button>
-        <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR CSV</button>
+        <button class="btn-csv" onclick="solicitarSenhaExportar()" style="padding:14px;font-size:14px;text-align:center">📄 EXPORTAR REGISTROS</button>
         <button class="btn-csv" onclick="abrirEncerrarTurnoRemoto()" style="background:#8B1A1A20;border-color:#C6282840;color:#EF9A9A;padding:14px;font-size:14px;text-align:center">🔒 ENCERRAR TURNO REMOTAMENTE</button>
       </div>
       <div style="text-align:center;font-size:10.5px;color:#546E7A;margin:2px 0">— fora da área restrita, consulta livre para todos —</div>
       <button class="btn-csv" id="btn-banco-placas" onclick="abrirBancoCavalos()" style="background:#6A1B9A20;border-color:#8E24AA40;color:#CE93D8;padding:14px;font-size:14px;text-align:center">🗄️ BANCO DE DADOS — PLACAS</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ESCOLHA DO FORMATO DE EXPORTAÇÃO -->
+<div class="modal-overlay" id="export-formato-overlay" style="align-items:center;padding:0 24px">
+  <div class="modal" style="max-width:320px;margin:0 auto">
+    <div class="modal-title">
+      <span>📄 Exportar registros</span>
+      <button class="modal-close" onclick="document.getElementById('export-formato-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div style="font-size:12px;color:#546E7A;margin-bottom:16px">Escolha o formato do arquivo</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-csv" onclick="document.getElementById('export-formato-overlay').classList.remove('open');exportarRegistros('excel')" style="padding:14px;font-size:14px;text-align:center">📊 EXCEL</button>
+      <button class="btn-csv" onclick="document.getElementById('export-formato-overlay').classList.remove('open');exportarRegistros('pdf')" style="padding:14px;font-size:14px;text-align:center">📕 PDF</button>
+      <button class="btn-csv" onclick="document.getElementById('export-formato-overlay').classList.remove('open');exportarRegistros('html')" style="padding:14px;font-size:14px;text-align:center">🌐 HTML</button>
     </div>
   </div>
 </div>
@@ -712,12 +728,12 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
         <span>🏭 PÁTIO</span>
         <div style="display:flex;gap:14px;align-items:center">
           <button class="modal-close" onclick="abrirAjudaPatio()" title="Ajuda" style="font-size:16px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">?</button>
-          <button class="modal-close" onclick="recalcularEstadoAba('patio')" title="Atualizar status de todos os cavalos do Pátio" style="font-size:16px;padding:6px">↻</button>
           <button class="modal-close" onclick="abrirAjustePatio()" title="Ajuste manual" style="font-size:18px;padding:6px">⚙️</button>
           <button class="modal-close" onclick="document.getElementById('patio-overlay').classList.remove('open')" style="padding:6px">✕</button>
         </div>
       </div>
-      <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:12px" id="patio-resumo">Caminhões atualmente dentro da empresa</div>
+      <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:10px" id="patio-resumo">Caminhões atualmente dentro da empresa</div>
+      <button onclick="recalcularEstadoAba('patio')" title="Atualizar status de todos os cavalos do Pátio" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-bottom:12px;padding:10px;background:#1565C020;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer"><span style="font-size:16px">↻</span> Atualizar status</button>
     </div>
     <div id="patio-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
   </div>
@@ -731,11 +747,11 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
         <span>🛣️ RUA</span>
         <div style="display:flex;gap:14px;align-items:center">
           <button class="modal-close" onclick="abrirAjudaRua()" title="Ajuda" style="font-size:16px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">?</button>
-          <button class="modal-close" onclick="recalcularEstadoAba('rua')" title="Atualizar status de todos os cavalos da Rua" style="font-size:16px;padding:6px">↻</button>
           <button class="modal-close" onclick="document.getElementById('rua-overlay').classList.remove('open')" style="padding:6px">✕</button>
         </div>
       </div>
-      <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:12px" id="rua-resumo">Caminhões atualmente na rua</div>
+      <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:10px" id="rua-resumo">Caminhões atualmente na rua</div>
+      <button onclick="recalcularEstadoAba('rua')" title="Atualizar status de todos os cavalos da Rua" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-bottom:12px;padding:10px;background:#1565C020;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer"><span style="font-size:16px">↻</span> Atualizar status</button>
     </div>
     <div id="rua-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
   </div>
@@ -3073,8 +3089,8 @@ function renderListaComDados(listaOriginal, fd) {
 }
 
 // Busca a coleção 'registros' inteira — usada só em ações raras e explícitas
-// (Backup completo, Exportar CSV sem filtro de data), nunca automaticamente.
-// Cacheada na sessão pra não repetir se o usuário fizer backup e depois CSV.
+// (Backup completo, Exportar registros sem filtro de data), nunca automaticamente.
+// Cacheada na sessão pra não repetir se o usuário fizer backup e depois exportar.
 let _cacheRegistrosCompleto = null;
 async function buscarTodosOsRegistros() {
   if (_cacheRegistrosCompleto) return _cacheRegistrosCompleto;
@@ -3085,7 +3101,10 @@ async function buscarTodosOsRegistros() {
   return lista;
 }
 
-async function exportCSV() {
+// Busca os dados a exportar (mesmo critério de sempre: dia escolhido no filtro
+// da aba Registros, ou todos os registros se nenhum dia estiver filtrado).
+// Compartilhada pelos três formatos de exportação, pra buscar uma vez só.
+async function _dadosParaExportar() {
   const fd = g('filtro-data');
   let dados;
   if (fd && window._fbReady && fd < dataCorteLocal()) {
@@ -3097,13 +3116,85 @@ async function exportCSV() {
   } else {
     dados = fd ? regs.filter(r=>r.data===fd) : regs;
   }
-  if (!dados.length) { toast('Nenhum dado'); return; }
-  const h = 'Cavalo,Carreta,Motorista,Data,Entrada,Saída,Situação,Destino\n';
-  const rows = dados.map(r=>`"${r.cavalo}","${r.carreta||''}","${r.motorista}","${fmtD(r.data)}","${r.entrada||''}","${r.saida||''}","${r.situacao}","${r.destino||''}"`).join('\n');
+  return { dados, fd };
+}
+
+const EXPORT_COLUNAS = ['Cavalo','Carreta','Motorista','Data','Entrada','Saída','Situação','Destino'];
+function _linhaExport(r) {
+  return [r.cavalo, r.carreta||'', r.motorista, fmtD(r.data), r.entrada||'', r.saida||'', r.situacao, r.destino||''];
+}
+function _esc(v) { return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Monta um relatório HTML pronto pra imprimir, reaproveitado pela exportação
+// em HTML e também pela exportação em PDF (que usa a impressão do próprio
+// navegador — não depende de nenhuma biblioteca externa, então funciona
+// mesmo sem internet).
+function _htmlRelatorioExport(dados, fd) {
+  const titulo = 'TransPecal — Registros' + (fd ? ' de ' + fmtD(fd) : ' (todos)');
+  const linhas = dados.map(_linhaExport);
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>'+_esc(titulo)+'</title><style>'
+    + 'body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#102040}'
+    + 'h1{font-size:18px;margin:0 0 4px}'
+    + '.sub{color:#546E7A;font-size:12px;margin-bottom:16px}'
+    + 'table{border-collapse:collapse;width:100%;font-size:12px}'
+    + 'th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;white-space:nowrap}'
+    + 'th{background:#102040;color:#fff}'
+    + 'tr:nth-child(even){background:#f5f7fa}'
+    + '@media print{body{margin:8px}}'
+    + '</style></head><body>'
+    + '<h1>🚛 TransPecal — Registros</h1>'
+    + '<div class="sub">'+_esc(fd ? 'Dia '+fmtD(fd) : 'Todos os registros')+' — gerado em '+_esc(fmtD(hoje()))+'</div>'
+    + '<table><thead><tr>'+EXPORT_COLUNAS.map(c=>'<th>'+c+'</th>').join('')+'</tr></thead><tbody>'
+    + linhas.map(l=>'<tr>'+l.map(v=>'<td>'+_esc(v)+'</td>').join('')+'</tr>').join('')
+    + '</tbody></table></body></html>';
+}
+
+function _nomeArquivoExport(fd) {
+  return 'caminhoes_'+(fd?fmtD(fd).replace(/\//g,'-'):'todos');
+}
+
+function _baixarArquivo(conteudo, mime, nomeArquivo) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['\uFEFF'+h+rows],{type:'text/csv;charset=utf-8'}));
-  a.download = 'caminhoes_'+(fd?fmtD(fd).replace(/\//g,'-'):'todos')+'.csv';
-  a.click(); toast('CSV exportado!');
+  a.href = URL.createObjectURL(new Blob([conteudo],{type:mime}));
+  a.download = nomeArquivo;
+  a.click();
+}
+
+// Ponto de entrada único, chamado pelos botões do modal "Exportar registros".
+async function exportarRegistros(formato) {
+  const { dados, fd } = await _dadosParaExportar();
+  if (!dados.length) { toast('Nenhum dado'); return; }
+  const nome = _nomeArquivoExport(fd);
+
+  if (formato === 'excel') {
+    // Truque sem dependências: uma tabela HTML salva com extensão .xls abre
+    // direto no Excel (e no Google Sheets), já formatada em colunas.
+    const linhas = dados.map(_linhaExport);
+    const tabela = '<table border="1"><tr>'+EXPORT_COLUNAS.map(c=>'<th>'+_esc(c)+'</th>').join('')+'</tr>'
+      + linhas.map(l=>'<tr>'+l.map(v=>'<td>'+_esc(v)+'</td>').join('')+'</tr>').join('')
+      + '</table>';
+    _baixarArquivo('\uFEFF<html><head><meta charset="UTF-8"></head><body>'+tabela+'</body></html>', 'application/vnd.ms-excel;charset=utf-8', nome+'.xls');
+    toast('Excel exportado!');
+    return;
+  }
+
+  if (formato === 'html') {
+    _baixarArquivo(_htmlRelatorioExport(dados, fd), 'text/html;charset=utf-8', nome+'.html');
+    toast('HTML exportado!');
+    return;
+  }
+
+  if (formato === 'pdf') {
+    // Sem biblioteca de PDF (pra não depender de internet): abre o relatório
+    // numa aba nova já pronta pra impressão — o próprio navegador tem a opção
+    // "Salvar como PDF" na janela de impressão.
+    const win = window.open('', '_blank');
+    if (!win) { toast('Permita pop-ups no navegador para gerar o PDF'); return; }
+    win.document.write(_htmlRelatorioExport(dados, fd));
+    win.document.close();
+    toast('Na janela de impressão, escolha "Salvar como PDF"');
+    setTimeout(() => { try { win.focus(); win.print(); } catch(e) {} }, 350);
+  }
 }
 
 // ── Histórico ────────────────────────────────────────
@@ -3324,10 +3415,10 @@ function cancelarSenha() {
 function solicitarSenhaExportar() {
   pedirSenha(
     'Área restrita',
-    'Acesso permitido somente com senha mestra. Digite a senha mestra para exportar CSV.',
+    'Acesso permitido somente com senha mestra. Digite a senha mestra para exportar os registros.',
     async function(senha) {
       if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
-      exportCSV();
+      document.getElementById('export-formato-overlay').classList.add('open');
     },
     true // teclado alfanumérico — a senha mestra tem letras e símbolos
   );
@@ -4097,17 +4188,17 @@ function construirPassosTour() {
 
   passos.push(
     { target: 'tab-btn-registrar', titulo: 'Aba Registrar', texto: 'Essa é a tela inicial — é aqui que se registra a entrada ou a saída de um caminhão. Só é possível registrar com um porteiro logado; sem login, o app fica somente para consulta.', aoEntrar: () => showTab('registrar') },
-    { target: 'placa-click-area', titulo: 'Toque no caminhão', texto: 'Toque na imagem do caminhão pra abrir o formulário de registro. É só ir preenchendo um passo de cada vez: cavalo, motorista, horário, destino e carreta.' }
+    { target: 'placa-click-area', titulo: 'Toque no caminhão', texto: 'Toque na imagem do caminhão pra abrir o formulário de registro. É só ir preenchendo um passo de cada vez: cavalo, motorista, horário, destino e carreta. Se a placa digitada não estiver no cadastro, o app avisa e pede confirmação (com senha) antes de continuar.' }
   );
 
   if (acessoLiberado()) {
     passos.push(
       { target: 'tab-btn-lista', titulo: 'Aba Registros', texto: 'Aqui ficam todos os registros do dia. Dá pra editar, ver o histórico do cavalo ou motorista, e completar informações deixadas pendentes (como destino ou carreta).', aoEntrar: () => showTab('lista') },
-      { target: 'btn-patio', titulo: 'Pátio', texto: 'Mostra todos os caminhões que estão dentro do pátio agora mesmo.' },
-      { target: 'btn-rua', titulo: 'Rua', texto: 'Mostra os caminhões que já saíram e ainda não retornaram.' },
-      { target: 'btn-config', titulo: 'Configurações', texto: 'Aqui você acessa backup, exportação em CSV e o cadastro de placas da frota.' },
-      { target: 'btn-banco-placas', titulo: 'Banco de placas', texto: 'Cadastro das placas dos cavalos da frota. Dá pra adicionar novas ou excluir uma que não faz mais parte da frota.', aoEntrar: () => abrirConfiguracoes() },
-      { target: 'tab-btn-historico', titulo: 'Aba Histórico', texto: 'Aqui você busca registros antigos filtrando por cavalo, carreta, motorista, mês ou ano.', aoEntrar: () => { document.getElementById('config-overlay').classList.remove('open'); showTab('historico'); } }
+      { target: 'btn-patio', titulo: 'Pátio', texto: 'Mostra todos os caminhões que estão dentro do pátio agora mesmo. O botão ↻ no topo atualiza o status de todos de uma vez, caso algum apareça desatualizado.' },
+      { target: 'btn-rua', titulo: 'Rua', texto: 'Mostra os caminhões que já saíram e ainda não retornaram. O botão ↻ no topo faz a mesma atualização em massa, só que pros caminhões da Rua.' },
+      { target: 'btn-config', titulo: 'Configurações', texto: 'Backup, exportação em CSV e encerrar turno remotamente ficam numa área restrita, protegida pela senha mestra.' },
+      { target: 'btn-banco-placas', titulo: 'Banco de placas', texto: 'Cadastro das placas dos cavalos da frota — consulta livre para qualquer um. Incluir uma placa pede a senha do porteiro logado ou a senha mestra; excluir só é permitido com a senha mestra.', aoEntrar: () => abrirConfiguracoes() },
+      { target: 'tab-btn-historico', titulo: 'Aba Histórico', texto: 'Aqui você busca registros antigos filtrando por cavalo, carreta ou motorista, com um período De/Até. Sem escolher nenhuma data, mostra sempre os últimos 30 dias.', aoEntrar: () => { document.getElementById('config-overlay').classList.remove('open'); showTab('historico'); } }
     );
   } else {
     passos.push({ target: ['tab-btn-lista', 'tab-btn-historico'], titulo: 'Abas Registros e Histórico', texto: 'Depois de liberar o acesso, essas abas mostram todos os registros, o Pátio, a Rua e o banco de placas.' });
