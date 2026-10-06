@@ -681,6 +681,36 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
   </div>
 </div>
 
+<!-- MODAL PERÍODO DA EXPORTAÇÃO (De/Até) -->
+<div class="modal-overlay" id="export-periodo-overlay" style="align-items:center;padding:0 24px">
+  <div class="modal" style="max-width:320px;margin:0 auto">
+    <div class="modal-title">
+      <span>📅 Período a exportar</span>
+      <button class="modal-close" onclick="document.getElementById('export-periodo-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div style="font-size:12px;color:#546E7A;margin-bottom:14px">Deixe em branco para exportar só a data de hoje</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <div style="display:flex;gap:6px;align-items:center;flex:1;min-width:124px">
+        <span style="font-size:10px;color:#546E7A;font-weight:600;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em">De</span>
+        <span style="position:relative;flex:1">
+          <input type="date" id="export-data-de" onclick="this.showPicker&&this.showPicker()"
+            style="width:100%;box-sizing:border-box;padding:9px 26px 9px 8px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:12.5px;background:#0D1F3C;color:#fff;outline:none">
+          <svg class="icone-calendario" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#90CAF9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+        </span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex:1;min-width:124px">
+        <span style="font-size:10px;color:#546E7A;font-weight:600;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em">Até</span>
+        <span style="position:relative;flex:1">
+          <input type="date" id="export-data-ate" onclick="this.showPicker&&this.showPicker()"
+            style="width:100%;box-sizing:border-box;padding:9px 26px 9px 8px;border:1px solid #1565C040;border-radius:var(--radius);font-family:'Barlow',sans-serif;font-size:12.5px;background:#0D1F3C;color:#fff;outline:none">
+          <svg class="icone-calendario" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#90CAF9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+        </span>
+      </div>
+    </div>
+    <button class="btn-csv" onclick="document.getElementById('export-periodo-overlay').classList.remove('open');document.getElementById('export-formato-overlay').classList.add('open')" style="width:100%;margin-top:10px;padding:13px;font-size:14px;text-align:center">PRÓXIMO →</button>
+  </div>
+</div>
+
 <!-- MODAL ESCOLHA DO FORMATO DE EXPORTAÇÃO -->
 <div class="modal-overlay" id="export-formato-overlay" style="align-items:center;padding:0 24px">
   <div class="modal" style="max-width:320px;margin:0 auto">
@@ -733,7 +763,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
         </div>
       </div>
       <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:10px" id="patio-resumo">Caminhões atualmente dentro da empresa</div>
-      <button onclick="recalcularEstadoAba('patio')" title="Atualizar status de todos os cavalos do Pátio" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-bottom:12px;padding:10px;background:#1565C020;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer"><span style="font-size:16px">↻</span> Atualizar status</button>
+      <button onclick="recalcularEstadoAba()" title="Atualizar status de todos os cavalos do Pátio e da Rua" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-bottom:12px;padding:10px;background:#1565C020;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer"><span style="font-size:16px">↻</span> Atualizar status</button>
     </div>
     <div id="patio-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
   </div>
@@ -751,7 +781,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
         </div>
       </div>
       <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:10px" id="rua-resumo">Caminhões atualmente na rua</div>
-      <button onclick="recalcularEstadoAba('rua')" title="Atualizar status de todos os cavalos da Rua" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-bottom:12px;padding:10px;background:#1565C020;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer"><span style="font-size:16px">↻</span> Atualizar status</button>
+      <button onclick="recalcularEstadoAba()" title="Atualizar status de todos os cavalos do Pátio e da Rua" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-bottom:12px;padding:10px;background:#1565C020;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer"><span style="font-size:16px">↻</span> Atualizar status</button>
     </div>
     <div id="rua-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
   </div>
@@ -3101,22 +3131,38 @@ async function buscarTodosOsRegistros() {
   return lista;
 }
 
-// Busca os dados a exportar (mesmo critério de sempre: dia escolhido no filtro
-// da aba Registros, ou todos os registros se nenhum dia estiver filtrado).
-// Compartilhada pelos três formatos de exportação, pra buscar uma vez só.
-async function _dadosParaExportar() {
-  const fd = g('filtro-data');
+// Lê o período escolhido no modal "De/Até" da exportação. Com os dois campos
+// em branco, ou só um preenchido, cai sempre num único dia (hoje, ou o único
+// dia informado) — nunca exporta "tudo" sem o usuário pedir um intervalo
+// explícito. "Até" é inclusivo (vira o dia seguinte internamente).
+function _limitesExport() {
+  const deVal = document.getElementById('export-data-de')?.value || '';
+  const ateVal = document.getElementById('export-data-ate')?.value || '';
+  const ini = deVal || ateVal || hoje();
+  const fimBase = ateVal || deVal || hoje();
+  const d = new Date(fimBase + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  const fimExclusivo = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  return { ini, fimExclusivo };
+}
+
+// Busca os dados a exportar no período ini..fimExclusivo (ver _limitesExport)
+// e devolve já ordenados por data e, dentro do mesmo dia, por horário
+// crescente — igual à ordem mostrada na aba Registros. Compartilhada pelos
+// três formatos de exportação, pra buscar uma vez só.
+async function _dadosParaExportar(ini, fimExclusivo) {
   let dados;
-  if (fd && window._fbReady && fd < dataCorteLocal()) {
-    dados = await buscarRegistrosDoDia(fd);
-  } else if (!fd && window._fbReady) {
-    // "Todos" — regs local só tem os últimos 30 dias; busca a coleção completa.
-    toast('Buscando todos os registros...');
-    dados = await buscarTodosOsRegistros();
+  if (window._fbReady && ini < dataCorteLocal()) {
+    toast('Buscando registros do período selecionado...');
+    dados = await buscarRegistrosPorPeriodo(ini, fimExclusivo);
   } else {
-    dados = fd ? regs.filter(r=>r.data===fd) : regs;
+    dados = regs.filter(r => r.data && r.data >= ini && r.data < fimExclusivo);
   }
-  return { dados, fd };
+  return dados.slice().sort((a,b) => {
+    const da = a.data+(a.entrada||a.saida||'');
+    const db = b.data+(b.entrada||b.saida||'');
+    return da>db?1:da<db?-1:0;
+  });
 }
 
 const EXPORT_COLUNAS = ['Cavalo','Carreta','Motorista','Data','Entrada','Saída','Situação','Destino'];
@@ -3129,10 +3175,29 @@ function _esc(v) { return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').r
 // em HTML e também pela exportação em PDF (que usa a impressão do próprio
 // navegador — não depende de nenhuma biblioteca externa, então funciona
 // mesmo sem internet).
-function _htmlRelatorioExport(dados, fd) {
-  const titulo = 'TransPecal — Registros' + (fd ? ' de ' + fmtD(fd) : ' (todos)');
+// "Até" guardado internamente é EXCLUSIVO (dia seguinte); pra mostrar pro
+// usuário (título, nome do arquivo) volta um dia, pro último dia incluído.
+function _ultimoDiaIncluido(fimExclusivo) {
+  const d = new Date(fimExclusivo + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function _rotuloPeriodoExport(ini, fimExclusivo) {
+  const fimIncl = _ultimoDiaIncluido(fimExclusivo);
+  return ini === fimIncl ? ('Dia '+fmtD(ini)) : ('De '+fmtD(ini)+' até '+fmtD(fimIncl));
+}
+function _nomeArquivoExport(ini, fimExclusivo) {
+  const fimIncl = _ultimoDiaIncluido(fimExclusivo);
+  const base = ini === fimIncl
+    ? fmtD(ini).replace(/\//g,'-')
+    : fmtD(ini).replace(/\//g,'-')+'_a_'+fmtD(fimIncl).replace(/\//g,'-');
+  return 'caminhoes_'+base;
+}
+
+function _htmlRelatorioExport(dados, ini, fimExclusivo) {
+  const rotulo = _rotuloPeriodoExport(ini, fimExclusivo);
   const linhas = dados.map(_linhaExport);
-  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>'+_esc(titulo)+'</title><style>'
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>'+_esc('TransPecal — Registros — '+rotulo)+'</title><style>'
     + 'body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#102040}'
     + 'h1{font-size:18px;margin:0 0 4px}'
     + '.sub{color:#546E7A;font-size:12px;margin-bottom:16px}'
@@ -3143,14 +3208,10 @@ function _htmlRelatorioExport(dados, fd) {
     + '@media print{body{margin:8px}}'
     + '</style></head><body>'
     + '<h1>🚛 TransPecal — Registros</h1>'
-    + '<div class="sub">'+_esc(fd ? 'Dia '+fmtD(fd) : 'Todos os registros')+' — gerado em '+_esc(fmtD(hoje()))+'</div>'
+    + '<div class="sub">'+_esc(rotulo)+' — gerado em '+_esc(fmtD(hoje()))+'</div>'
     + '<table><thead><tr>'+EXPORT_COLUNAS.map(c=>'<th>'+c+'</th>').join('')+'</tr></thead><tbody>'
     + linhas.map(l=>'<tr>'+l.map(v=>'<td>'+_esc(v)+'</td>').join('')+'</tr>').join('')
     + '</tbody></table></body></html>';
-}
-
-function _nomeArquivoExport(fd) {
-  return 'caminhoes_'+(fd?fmtD(fd).replace(/\//g,'-'):'todos');
 }
 
 function _baixarArquivo(conteudo, mime, nomeArquivo) {
@@ -3161,10 +3222,12 @@ function _baixarArquivo(conteudo, mime, nomeArquivo) {
 }
 
 // Ponto de entrada único, chamado pelos botões do modal "Exportar registros".
+// Usa o período escolhido no modal "De/Até" (ver _limitesExport).
 async function exportarRegistros(formato) {
-  const { dados, fd } = await _dadosParaExportar();
-  if (!dados.length) { toast('Nenhum dado'); return; }
-  const nome = _nomeArquivoExport(fd);
+  const { ini, fimExclusivo } = _limitesExport();
+  const dados = await _dadosParaExportar(ini, fimExclusivo);
+  if (!dados.length) { toast('Nenhum dado nesse período'); return; }
+  const nome = _nomeArquivoExport(ini, fimExclusivo);
 
   if (formato === 'excel') {
     // Truque sem dependências: uma tabela HTML salva com extensão .xls abre
@@ -3179,7 +3242,7 @@ async function exportarRegistros(formato) {
   }
 
   if (formato === 'html') {
-    _baixarArquivo(_htmlRelatorioExport(dados, fd), 'text/html;charset=utf-8', nome+'.html');
+    _baixarArquivo(_htmlRelatorioExport(dados, ini, fimExclusivo), 'text/html;charset=utf-8', nome+'.html');
     toast('HTML exportado!');
     return;
   }
@@ -3190,7 +3253,7 @@ async function exportarRegistros(formato) {
     // "Salvar como PDF" na janela de impressão.
     const win = window.open('', '_blank');
     if (!win) { toast('Permita pop-ups no navegador para gerar o PDF'); return; }
-    win.document.write(_htmlRelatorioExport(dados, fd));
+    win.document.write(_htmlRelatorioExport(dados, ini, fimExclusivo));
     win.document.close();
     toast('Na janela de impressão, escolha "Salvar como PDF"');
     setTimeout(() => { try { win.focus(); win.print(); } catch(e) {} }, 350);
@@ -3418,7 +3481,9 @@ function solicitarSenhaExportar() {
     'Acesso permitido somente com senha mestra. Digite a senha mestra para exportar os registros.',
     async function(senha) {
       if (!(await ehSenhaMestra(senha))) { toast('Senha mestra incorreta!'); return; }
-      document.getElementById('export-formato-overlay').classList.add('open');
+      document.getElementById('export-data-de').value = '';
+      document.getElementById('export-data-ate').value = '';
+      document.getElementById('export-periodo-overlay').classList.add('open');
     },
     true // teclado alfanumérico — a senha mestra tem letras e símbolos
   );
@@ -4057,21 +4122,31 @@ function abrirDetalheCartao(tipo, cavalo) {
 // Escopado só aos cavalos já visíveis nessa aba (mais rápido que varrer toda
 // a frota) — reaproveita a mesma reconstrução por histórico completo do
 // recalcularEstadoCavalo(), cavalo por cavalo.
-async function recalcularEstadoAba(tipo) {
+// Tocar no botão de atualizar, seja no Pátio ou na Rua, atualiza os dois de
+// uma vez só — não importa qual tela estava aberta no momento do toque.
+// A mensagem de conclusão aparece normalmente (toast flutuante), então já
+// aparece por cima de qualquer uma das duas telas, a que estiver aberta.
+async function recalcularEstadoAba() {
   if (isReadOnly()) { toast('Atualizar status é uma ação restrita a porteiros logados'); return; }
   if (!window._fbReady) { toast('Sem conexão — tente novamente com internet'); return; }
-  const lista = tipo === 'patio' ? _patioAtual : _ruaAtual;
-  if (!lista || !lista.length) { toast('Nada para atualizar nesta aba'); return; }
-  toast('Atualizando ' + lista.length + ' caminhão' + (lista.length !== 1 ? 'ões' : '') + '...');
+  // Garante as listas mais atuais dos dois, mesmo que a outra tela (a que não
+  // estava aberta) não tenha sido renderizada ainda nesta sessão.
+  renderPatio();
+  renderRua();
+  const placas = new Set();
+  (_patioAtual||[]).forEach(r => placas.add(r.cavalo));
+  (_ruaAtual||[]).forEach(r => placas.add(r.cavalo));
+  if (!placas.size) { toast('Nada para atualizar'); return; }
+  toast('Atualizando ' + placas.size + ' ' + (placas.size !== 1 ? 'caminhões' : 'caminhão') + '...');
   try {
-    for (const r of lista) {
-      await recalcularEstadoCavalo(r.cavalo);
+    for (const placa of placas) {
+      await recalcularEstadoCavalo(placa);
     }
     renderPatio();
     renderRua();
-    toast('Status atualizado ✓');
+    toast('Atualização concluída ✓');
   } catch (err) {
-    console.error('Erro ao atualizar status em massa (' + tipo + '):', err);
+    console.error('Erro ao atualizar status em massa:', err);
     toast('Erro ao atualizar — tente de novo');
   }
 }
