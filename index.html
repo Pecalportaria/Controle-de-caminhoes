@@ -776,6 +776,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
       <div class="modal-title">
         <span>🛣️ RUA</span>
         <div style="display:flex;gap:14px;align-items:center">
+          <button class="modal-close" onclick="abrirGuerdau24h()" title="Saídas para a GUERDAU nas últimas 24h" style="font-size:14px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">🏭</button>
           <button class="modal-close" onclick="abrirAjudaRua()" title="Ajuda" style="font-size:16px;padding:6px;border:1px solid #1565C0;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#90CAF9;background:#1565C040">?</button>
           <button class="modal-close" onclick="document.getElementById('rua-overlay').classList.remove('open')" style="padding:6px">✕</button>
         </div>
@@ -784,6 +785,21 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
       <button onclick="recalcularEstadoAba()" title="Atualizar status de todos os cavalos do Pátio e da Rua" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-bottom:12px;padding:10px;background:#1565C020;border:1px solid #1565C060;border-radius:var(--radius);color:#90CAF9;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer"><span style="font-size:16px">↻</span> Atualizar status</button>
     </div>
     <div id="rua-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
+  </div>
+</div>
+
+<!-- MODAL SAÍDAS PARA A GUERDAU NAS ÚLTIMAS 24H (dentro do fluxo da Rua) -->
+<div class="modal-overlay" id="guerdau24h-overlay" style="z-index:405">
+  <div class="modal" style="padding-bottom:0;display:flex;flex-direction:column;max-height:85vh">
+    <div style="flex-shrink:0">
+      <div class="modal-title">
+        <span>🏭 GUERDAU — últimas 24h</span>
+        <button class="modal-close" onclick="document.getElementById('guerdau24h-overlay').classList.remove('open')">✕</button>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:#90CAF9;margin-bottom:4px" id="guerdau24h-resumo">Caminhões que saíram para a GUERDAU</div>
+      <div style="font-size:11px;color:#546E7A;margin-bottom:12px">Só para consulta — atualiza sozinho, ao vivo, igual ao Pátio e a Rua.</div>
+    </div>
+    <div id="guerdau24h-lista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px"></div>
   </div>
 </div>
 
@@ -995,6 +1011,7 @@ function iniciarFirebase() {
     renderLista();
     if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
     if (document.getElementById('rua-overlay')?.classList.contains('open')) renderRua();
+    if (document.getElementById('guerdau24h-overlay')?.classList.contains('open')) renderGuerdau24h();
   }, (err) => {
     console.error('Firestore erro:', err);
     toast('Erro de conexão — usando dados locais');
@@ -4217,6 +4234,58 @@ function renderRua() {
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
   `; }).join('');
+}
+
+// ── Resumo informativo: saídas para a GUERDAU nas últimas 24h ──────────
+// Só pra consulta, não altera nada. Olha os registros de saída com destino
+// GUERDAU dentro da janela local de 30 dias (regs) e filtra os que caem nas
+// últimas 24h a partir de agora. Atualiza sozinho pelo mesmo listener ao
+// vivo que já alimenta o Pátio e a Rua (ver onSnapshot de 'registros').
+function calcularSaidasGuerdau24h() {
+  const agora = Date.now();
+  const limite = agora - 24*60*60*1000;
+  return regs
+    .filter(r => {
+      if (!r.saida || !r.data) return false;
+      if (semAcento(r.destino||'').trim() !== 'GUERDAU') return false;
+      const ts = new Date(r.data + 'T' + r.saida + ':00').getTime();
+      return !isNaN(ts) && ts >= limite && ts <= agora;
+    })
+    .sort((a,b) => {
+      const da = a.data+a.saida, db = b.data+b.saida;
+      return db>da?1:db<da?-1:0; // mais recente primeiro
+    });
+}
+
+function abrirGuerdau24h() {
+  renderGuerdau24h();
+  document.getElementById('guerdau24h-overlay').classList.add('open');
+}
+
+function renderGuerdau24h() {
+  const el = document.getElementById('guerdau24h-lista');
+  const resumoEl = document.getElementById('guerdau24h-resumo');
+  const lista = calcularSaidasGuerdau24h();
+
+  if (!lista.length) {
+    if (resumoEl) resumoEl.textContent = 'Nenhuma saída para a GUERDAU nas últimas 24h';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🏭</div><p>Nenhuma saída para a GUERDAU nas últimas 24h</p></div>';
+    return;
+  }
+
+  const total = lista.length;
+  if (resumoEl) resumoEl.textContent = total + ' sa' + (total !== 1 ? 'ídas' : 'ída') + ' para a GUERDAU nas últimas 24h';
+
+  el.innerHTML = lista.map(r => `
+    <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;color:#FFD600;letter-spacing:.01em;font-variant-numeric:tabular-nums">${r.cavalo}</div>
+        <span style="font-size:13px;color:#90CAF9;font-weight:600">${r.saida}</span>
+      </div>
+      <div style="font-size:12.5px;color:#B0BEC5">${r.motorista || ''}${r.carreta ? ' · '+r.carreta : ''}</div>
+      <div style="font-size:11px;color:#546E7A;margin-top:2px">${fmtD(r.data)}</div>
+    </div>
+  `).join('');
 }
 
 // Confirma a saída de um caminhão em Stand By com o horário atual
