@@ -288,7 +288,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
 
 .reg-card{background:#0D2744;border:3px double #FFFFFF;border-radius:var(--radius-lg);margin-bottom:28px;overflow:hidden;animation:up .18s ease}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.pill{display:inline-block;min-width:128px;text-align:center;font-size:14px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.04em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase}
+.pill{font-size:14px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.04em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase}
 .pill-car{background:#2E7D32;color:#FFFFFF;border:1px solid #2E7D32}
 .pill-vaz{background:#C62828;color:#FFFFFF;border:1px solid #C62828}
 .reg-grid{display:grid;grid-template-columns:1fr 1fr;width:100%}
@@ -4219,8 +4219,8 @@ function renderRua() {
     // a placa e a pílula, como era antes.
     const meio = paraGuerdau ? `
       <div style="flex:1;min-width:0;text-align:center;padding:0 6px;overflow:hidden">
-        <div style="font-size:13px;color:#90CAF9;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.destino}</div>
-        <div style="font-size:11.5px;color:#546E7A;white-space:nowrap">${fmtD(r.data)}</div>
+        <div style="font-size:11px;color:#90CAF9;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.destino}</div>
+        <div style="font-size:10px;color:#546E7A;white-space:nowrap">${fmtD(r.data)}</div>
       </div>` : '';
     return `
     <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('rua', '${cav}')">
