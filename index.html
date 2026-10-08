@@ -4211,13 +4211,21 @@ function renderRua() {
   const total = rua.length;
   if (resumoEl) resumoEl.textContent = total + ' caminh' + (total !== 1 ? 'ões' : 'ão') + ' na rua';
 
-  el.innerHTML = rua.map(r => { const cav = (r.cavalo||'').replace(/'/g,"\\'"); return `
+  el.innerHTML = rua.map(r => {
+    const cav = (r.cavalo||'').replace(/'/g,"\\'");
+    const paraGuerdau = semAcento(r.destino||'').trim() === 'GUERDAU';
+    // Só os que vão pra GUERDAU mostram destino+data no meio do card — assim
+    // dá pra ver de relance quantos estão indo pra lá. Os demais ficam só com
+    // a placa e a pílula, como era antes.
+    const meio = paraGuerdau ? `
+      <div style="flex:1;min-width:0;text-align:center;padding:0 6px;overflow:hidden">
+        <div style="font-size:11px;color:#90CAF9;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.destino}</div>
+        <div style="font-size:10px;color:#546E7A;white-space:nowrap">${fmtD(r.data)}</div>
+      </div>` : '';
+    return `
     <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('rua', '${cav}')">
       <div style="flex:0 0 auto;font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;color:#FFD600;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
-      <div style="flex:1;min-width:0;text-align:center;padding:0 6px;overflow:hidden">
-        <div style="font-size:11px;color:#90CAF9;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.destino||'—'}</div>
-        <div style="font-size:10px;color:#546E7A;white-space:nowrap">${fmtD(r.data)}</div>
-      </div>
+      ${meio}
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;flex:0 0 auto">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
   `; }).join('');
