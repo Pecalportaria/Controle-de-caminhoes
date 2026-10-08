@@ -288,7 +288,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
 
 .reg-card{background:#0D2744;border:3px double #FFFFFF;border-radius:var(--radius-lg);margin-bottom:28px;overflow:hidden;animation:up .18s ease}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.pill{font-size:14px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.04em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase}
+.pill{display:inline-block;text-align:center;font-size:14px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.04em;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase}
 .pill-car{background:#2E7D32;color:#FFFFFF;border:1px solid #2E7D32}
 .pill-vaz{background:#C62828;color:#FFFFFF;border:1px solid #C62828}
 .reg-grid{display:grid;grid-template-columns:1fr 1fr;width:100%}
@@ -4057,6 +4057,27 @@ function aplicarStatusAtualPatio(lista) {
   });
 }
 
+// Deixa as pílulas "VAZIO" com a mesma largura das "CARREGADO" dentro do
+// container indicado — mede a largura que "CARREGADO" ocupa naturalmente
+// (com a fonte real do aparelho, sem chutar um valor fixo em pixels) e aplica
+// essa largura só nas pílulas de vazio. As de carregado nunca são tocadas,
+// então continuam com a largura natural de sempre.
+function igualarLargurasPilulas(containerId) {
+  // Adia pro próximo frame: renderPatio()/renderRua() às vezes rodam ANTES do
+  // modal ganhar a classe "open" (ex: ao abrir pela primeira vez), e medir a
+  // largura de um elemento ainda escondido sempre dá zero.
+  requestAnimationFrame(() => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const carregadas = container.querySelectorAll('.pill-car');
+    if (!carregadas.length) return; // nada pra igualar
+    let maior = 0;
+    carregadas.forEach(p => { p.style.width = ''; maior = Math.max(maior, p.offsetWidth); });
+    if (!maior) return; // ainda sem layout visível — não força largura nenhuma
+    container.querySelectorAll('.pill-vaz').forEach(p => { p.style.width = maior + 'px'; });
+  });
+}
+
 function renderPatio() {
   const el = document.getElementById('patio-lista');
   const resumoEl = document.getElementById('patio-resumo');
@@ -4080,6 +4101,7 @@ function renderPatio() {
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;cursor:pointer" onclick="event.stopPropagation(); alterarStatusPatio('${cav}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
   `; }).join('');
+  igualarLargurasPilulas('patio-lista');
 }
 
 // Abre a janela pequena com os detalhes do cartão (Pátio ou Rua) para a placa tocada
@@ -4219,8 +4241,8 @@ function renderRua() {
     // a placa e a pílula, como era antes.
     const meio = paraGuerdau ? `
       <div style="flex:1;min-width:0;text-align:center;padding:0 6px;overflow:hidden">
-        <div style="font-size:11px;color:#90CAF9;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.destino}</div>
-        <div style="font-size:10px;color:#546E7A;white-space:nowrap">${fmtD(r.data)}</div>
+        <div style="font-size:13px;color:#90CAF9;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.destino}</div>
+        <div style="font-size:11.5px;color:#546E7A;white-space:nowrap;margin-top:4px">${fmtD(r.data)}</div>
       </div>` : '';
     return `
     <div style="background:#102040;border:1px solid #1565C030;border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('rua', '${cav}')">
@@ -4229,6 +4251,7 @@ function renderRua() {
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;flex:0 0 auto">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
   `; }).join('');
+  igualarLargurasPilulas('rua-lista');
 }
 
 // Confirma a saída de um caminhão em Stand By com o horário atual
