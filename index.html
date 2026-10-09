@@ -4239,13 +4239,17 @@ function renderRua() {
 
   el.innerHTML = rua.map(r => {
     const cav = (r.cavalo||'').replace(/'/g,"\\'");
-    const paraGuerdau = semAcento(r.destino||'').trim() === 'GUERDAU';
-    // Só os que vão pra GUERDAU mostram destino+data no meio do card — assim
-    // dá pra ver de relance quantos estão indo pra lá. Os demais ficam só com
-    // a placa e a pílula, como era antes.
-    const meio = paraGuerdau ? `
+    const destNorm = semAcento(r.destino||'').replace(/\s+/g,'');
+    const paraGuerdau = destNorm === 'GUERDAU';
+    // DALLEAÇO: tolera variações de digitação (DALLEAÇO, DALLE AÇO, DALEAÇO...)
+    const paraDalleaco = /^DALL?EACO/.test(destNorm);
+    // Só os que vão pra GUERDAU ou DALLEAÇO mostram destino+data no meio do card —
+    // assim dá pra ver de relance quantos estão indo pra lá. Os demais ficam só
+    // com a placa e a pílula, como era antes.
+    const corDestino = paraDalleaco ? '#FFB74D' : '#90CAF9';
+    const meio = (paraGuerdau || paraDalleaco) ? `
       <div style="flex:1;min-width:0;text-align:center;padding:0 6px;overflow:hidden">
-        <div style="font-size:13px;color:#90CAF9;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.destino}</div>
+        <div style="font-size:13px;color:${corDestino};font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.destino}</div>
         <div style="font-size:11.5px;color:#546E7A;white-space:nowrap;margin-top:4px">${fmtD(r.data)}</div>
       </div>` : '';
     return `
