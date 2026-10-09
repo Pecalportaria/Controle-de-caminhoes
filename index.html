@@ -93,6 +93,10 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, or
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* Evita que um toque selecione texto e abra o painel "Toque para pesquisar" do Google no Android.
+   Campos de digitação continuam selecionáveis normalmente. */
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text}
 :root{
   --text:#0D1B2A;
   --radius:10px;--radius-lg:16px;
@@ -521,8 +525,8 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
       <div class="form-row">
         <div class="form-label">Horário</div>
         <div class="hora-wrap">
-          <div class="hora-col" onclick="document.getElementById('e-entrada').focus()" style="cursor:text"><span class="hora-label">Entrada</span><input type="text" id="e-entrada" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
-          <div class="hora-col" style="position:relative"><span class="hora-label" onclick="document.getElementById('e-saida').focus()" style="cursor:text">Saída</span><input type="text" id="e-saida" placeholder="00:00" maxlength="5" inputmode="numeric" onclick="this.focus()"><span id="e-standby-aviso" style="display:none;position:absolute;right:10px;bottom:9px;font-size:16px;pointer-events:none">🕓</span></div>
+          <div class="hora-col" onclick="document.getElementById('e-entrada').focus()" style="cursor:text"><span class="hora-label">Entrada</span><input type="text" id="e-entrada" placeholder="00:00" maxlength="5" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+          <div class="hora-col" style="position:relative"><span class="hora-label" onclick="document.getElementById('e-saida').focus()" style="cursor:text">Saída</span><input type="text" id="e-saida" placeholder="00:00" maxlength="5" inputmode="numeric" onclick="this.focus()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><span id="e-standby-aviso" style="display:none;position:absolute;right:10px;bottom:9px;font-size:16px;pointer-events:none">🕓</span></div>
         </div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="e-sit-car" onclick="setEditSit('carregado')">Carregado</button><button class="sit-btn" id="e-sit-vaz" onclick="setEditSit('vazio')">Vazio</button></div></div>
@@ -548,8 +552,8 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
       <div class="form-row">
         <div class="form-label">Horário</div>
         <div class="hora-wrap">
-          <div class="hora-col"><span class="hora-label">Entrada</span><input type="text" id="r-entrada" placeholder="00:00" maxlength="5" inputmode="numeric"></div>
-          <div class="hora-col" style="position:relative"><span class="hora-label">Saída</span><input type="text" id="r-saida" placeholder="00:00" maxlength="5" inputmode="numeric"><span id="r-standby-aviso" style="display:none;position:absolute;right:10px;bottom:9px;font-size:16px;pointer-events:none">🕓</span></div>
+          <div class="hora-col"><span class="hora-label">Entrada</span><input type="text" id="r-entrada" placeholder="00:00" maxlength="5" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+          <div class="hora-col" style="position:relative"><span class="hora-label">Saída</span><input type="text" id="r-saida" placeholder="00:00" maxlength="5" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><span id="r-standby-aviso" style="display:none;position:absolute;right:10px;bottom:9px;font-size:16px;pointer-events:none">🕓</span></div>
         </div>
       </div>
       <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="r-sit-car" onclick="setRevisaoSit('carregado')">Carregado</button><button class="sit-btn" id="r-sit-vaz" onclick="setRevisaoSit('vazio')">Vazio</button></div></div>
@@ -2031,7 +2035,7 @@ function renderStep() {
     const hintPendente = (s.key==='destino') ? '<div style="font-size:11px;color:#546E7A;text-align:center;margin-top:10px">Deixe em branco e toque em Próximo para marcar como pendente 🕓</div>'
                         : (s.key==='carreta') ? '<div style="font-size:11px;color:#546E7A;text-align:center;margin-top:10px">Deixe em branco para escolher o tipo (ou definir depois 🕓)</div>'
                         : '';
-    cont.innerHTML = hint+'<input type="text" id="painel-inp" class="painel-input" placeholder="'+s.ph+'" maxlength="'+s.maxlen+'" inputmode="'+s.mode+'" value="'+val+'" autocomplete="off" style="'+inputStyle+'">'+hintPendente;
+    cont.innerHTML = hint+'<input type="text" id="painel-inp" class="painel-input" placeholder="'+s.ph+'" maxlength="'+s.maxlen+'" inputmode="'+s.mode+'" value="'+val+'" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="'+inputStyle+'">'+hintPendente;
     setTimeout(()=>{
       const inp = document.getElementById('painel-inp');
       if (!inp) return;
@@ -2119,7 +2123,7 @@ function editarHora(tipo) {
   const wrap = document.getElementById('hora-edit-wrap');
   if (!wrap) return;
   wrap.style.display = 'block';
-  wrap.innerHTML = '<input type="text" id="hora-edit-inp" maxlength="5" inputmode="numeric" value="" placeholder="00:00">';
+  wrap.innerHTML = '<input type="text" id="hora-edit-inp" maxlength="5" inputmode="numeric" value="" placeholder="00:00" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">';
   const inp = document.getElementById('hora-edit-inp');
   maskHora(inp);
 
@@ -4293,20 +4297,20 @@ function construirPassosTour() {
   if (!acessoLiberado()) {
     passos.push({ target: 'acesso-restrito-box', titulo: 'Área restrita', texto: 'Na primeira vez, é preciso digitar a senha de acesso para liberar a navegação (modo leitura). Depois disso o restante do app fica disponível.' });
   } else {
-    passos.push({ target: 'turno-bar', titulo: 'Login do porteiro', texto: 'Aqui você faz login com seu nome e senha para iniciar o turno. Sem login, o app funciona só em modo leitura, sem poder registrar nada.' });
+    passos.push({ target: 'turno-bar', titulo: 'Login do porteiro', texto: 'Aqui você faz login com seu nome e senha para iniciar o turno. Sem login, o app funciona só em modo leitura, sem poder registrar nada. Só um aparelho por vez pode ficar com o turno aberto.' });
   }
 
   passos.push(
     { target: 'tab-btn-registrar', titulo: 'Aba Registrar', texto: 'Essa é a tela inicial — é aqui que se registra a entrada ou a saída de um caminhão. Só é possível registrar com um porteiro logado; sem login, o app fica somente para consulta.', aoEntrar: () => showTab('registrar') },
-    { target: 'placa-click-area', titulo: 'Toque no caminhão', texto: 'Toque na imagem do caminhão pra abrir o formulário de registro. É só ir preenchendo um passo de cada vez: cavalo, motorista, horário, destino e carreta. Se a placa digitada não estiver no cadastro, o app avisa e pede confirmação (com senha) antes de continuar.' }
+    { target: 'placa-click-area', titulo: 'Toque no caminhão', texto: 'Toque na imagem do caminhão pra abrir o formulário de registro. Ele vai por etapas: horário, data, placa do cavalo, motorista, destino, situação (carregado/vazio) e placa da carreta. Em cada etapa, o botão ? no topo explica o que fazer — por exemplo, se a placa não estiver no cadastro (o app pede confirmação com senha) ou se você deixar um campo em branco (fica 🕓 pendente).' }
   );
 
   if (acessoLiberado()) {
     passos.push(
-      { target: 'tab-btn-lista', titulo: 'Aba Registros', texto: 'Aqui ficam todos os registros do dia. Dá pra editar, ver o histórico do cavalo ou motorista, e completar informações deixadas pendentes (como destino ou carreta).', aoEntrar: () => showTab('lista') },
-      { target: 'btn-patio', titulo: 'Pátio', texto: 'Mostra todos os caminhões que estão dentro do pátio agora mesmo. O botão ↻ no topo atualiza o status de todos de uma vez, caso algum apareça desatualizado.' },
-      { target: 'btn-rua', titulo: 'Rua', texto: 'Mostra os caminhões que já saíram e ainda não retornaram. O botão ↻ no topo faz a mesma atualização em massa, só que pros caminhões da Rua.' },
-      { target: 'btn-config', titulo: 'Configurações', texto: 'Backup, exportação em CSV e encerrar turno remotamente ficam numa área restrita, protegida pela senha mestra.' },
+      { target: 'tab-btn-lista', titulo: 'Aba Registros', texto: 'Aqui ficam os registros do dia (troque a data pra ver outro). Toque no cavalo, na carreta ou no motorista pra ver o histórico. Itens com 🕓 ficam pendentes: toque neles pra completar, ou use "Confirmar saída agora" no Stand By. Editar e Remover pedem senha.', aoEntrar: () => showTab('lista') },
+      { target: 'btn-patio', titulo: 'Pátio', texto: 'Mostra os caminhões que estão dentro do pátio agora. Toque num caminhão pra ver os detalhes, ou no status (Carregado/Vazio) pra alternar. Lá dentro, "↻ Atualizar status" recalcula a lista, o ? tira dúvidas e o ⚙️ faz ajuste manual (raro, pede senha de porteiro).' },
+      { target: 'btn-rua', titulo: 'Rua', texto: 'Mostra os caminhões que já saíram e ainda não retornaram. Toque num caminhão pra ver data e hora da saída, motorista e destino. O botão "↻ Atualizar status" recalcula a lista, e o ? explica a tela.' },
+      { target: 'btn-config', titulo: 'Configurações', texto: 'Backup, exportar registros (você escolhe o período De/Até e o formato: Excel, PDF ou HTML) e encerrar turno remotamente ficam numa área restrita, protegida pela senha mestra.' },
       { target: 'btn-banco-placas', titulo: 'Banco de placas', texto: 'Cadastro das placas dos cavalos da frota — consulta livre para qualquer um. Incluir uma placa pede a senha do porteiro logado ou a senha mestra; excluir só é permitido com a senha mestra.', aoEntrar: () => abrirConfiguracoes() },
       { target: 'tab-btn-historico', titulo: 'Aba Histórico', texto: 'Aqui você busca registros antigos filtrando por cavalo, carreta ou motorista, com um período De/Até. Sem escolher nenhuma data, mostra sempre os últimos 30 dias.', aoEntrar: () => { document.getElementById('config-overlay').classList.remove('open'); showTab('historico'); } }
     );
