@@ -4092,6 +4092,7 @@ function renderPatio() {
 
   if (!patio.length) {
     if (resumoEl) resumoEl.textContent = 'Nenhum caminhão no pátio';
+    el._htmlAnterior = null;
     el.innerHTML = '<div class="empty"><div class="empty-icon">🏭</div><p>Pátio vazio</p></div>';
     return;
   }
@@ -4099,12 +4100,16 @@ function renderPatio() {
   const total = patio.length;
   if (resumoEl) resumoEl.textContent = total + ' caminh' + (total !== 1 ? 'ões' : 'ão') + ' no pátio';
 
-  el.innerHTML = patio.map(r => { const cav = (r.cavalo||'').replace(/'/g,"\\'"); return `
+  const htmlPatio = patio.map(r => { const cav = (r.cavalo||'').replace(/'/g,"\\'"); return `
     <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#FDD835' : '#1565C030'};border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('patio', '${cav}')">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;color:#FFD600;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;cursor:pointer" onclick="event.stopPropagation(); alterarStatusPatio('${cav}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
   `; }).join('');
+  // Só mexe no DOM se algo mudou (evita piscar/atrapalhar toques nos redesenhos automáticos)
+  if (el._htmlAnterior === htmlPatio) return;
+  el._htmlAnterior = htmlPatio;
+  el.innerHTML = htmlPatio;
   igualarLargurasPilulas('patio-lista');
 }
 
@@ -4230,6 +4235,7 @@ function renderRua() {
 
   if (!rua.length) {
     if (resumoEl) resumoEl.textContent = 'Nenhum caminhão na rua';
+    el._htmlAnterior = null;
     el.innerHTML = '<div class="empty"><div class="empty-icon">🛣️</div><p>Nenhum caminhão na rua</p></div>';
     return;
   }
@@ -4237,7 +4243,7 @@ function renderRua() {
   const total = rua.length;
   if (resumoEl) resumoEl.textContent = total + ' caminh' + (total !== 1 ? 'ões' : 'ão') + ' na rua';
 
-  el.innerHTML = rua.map(r => {
+  const htmlRua = rua.map(r => {
     const cav = (r.cavalo||'').replace(/'/g,"\\'");
     const destNorm = semAcento(r.destino||'').replace(/\s+/g,'');
     const paraGuerdau = destNorm === 'GUERDAU';
@@ -4262,8 +4268,25 @@ function renderRua() {
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;flex:0 0 auto">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
   `; }).join('');
+  if (el._htmlAnterior === htmlRua) return;
+  el._htmlAnterior = htmlRua;
+  el.innerHTML = htmlRua;
   igualarLargurasPilulas('rua-lista');
 }
+
+// ── Atualização automática LOCAL (não depende de internet nem do Firebase) ──
+// Redesenha Pátio/Rua a cada 1 min (só se estiverem abertos) e ao voltar pro
+// app. Usa apenas os dados já no aparelho + o relógio local, então funciona
+// offline. Serve, por ex., para o destino GUERDAU/DALLEAÇO sumir após 24h.
+function atualizarTelasLocal() {
+  if (document.hidden) return;
+  if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
+  if (document.getElementById('rua-overlay')?.classList.contains('open')) renderRua();
+}
+setInterval(atualizarTelasLocal, 60000);
+document.addEventListener('visibilitychange', atualizarTelasLocal);
+window.addEventListener('focus', atualizarTelasLocal);
+window.addEventListener('online', atualizarTelasLocal);
 
 // Confirma a saída de um caminhão em Stand By com o horário atual
 async function confirmarSaidaStandBy(id) {
