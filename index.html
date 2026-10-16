@@ -4107,9 +4107,13 @@ function renderPatio() {
     </div>
   `; }).join('');
   // Só mexe no DOM se algo mudou (evita piscar/atrapalhar toques nos redesenhos automáticos)
-  if (el._htmlAnterior === htmlPatio) return;
-  el._htmlAnterior = htmlPatio;
-  el.innerHTML = htmlPatio;
+  // Só troca o HTML se mudou, mas SEMPRE reaplica a largura das pílulas:
+  // se o modal estava fechado quando foi desenhado, a medida deu zero e
+  // precisa ser refeita quando ele abre.
+  if (el._htmlAnterior !== htmlPatio) {
+    el._htmlAnterior = htmlPatio;
+    el.innerHTML = htmlPatio;
+  }
   igualarLargurasPilulas('patio-lista');
 }
 
@@ -4268,9 +4272,13 @@ function renderRua() {
       <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;flex:0 0 auto">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
   `; }).join('');
-  if (el._htmlAnterior === htmlRua) return;
-  el._htmlAnterior = htmlRua;
-  el.innerHTML = htmlRua;
+  // Só troca o HTML se mudou, mas SEMPRE reaplica a largura das pílulas:
+  // se o modal estava fechado quando foi desenhado, a medida deu zero e
+  // precisa ser refeita quando ele abre.
+  if (el._htmlAnterior !== htmlRua) {
+    el._htmlAnterior = htmlRua;
+    el.innerHTML = htmlRua;
+  }
   igualarLargurasPilulas('rua-lista');
 }
 
