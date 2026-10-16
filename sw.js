@@ -73,6 +73,14 @@ self.addEventListener('fetch', (event) => {
   if (ehConteudoQueDeveSerSempreAtual(req)) {
     event.respondWith(
       (async () => {
+        // SEM INTERNET (modo avião, sem sinal): nem tenta a rede — abre
+        // direto a cópia guardada, instantâneo. Se por algum motivo não
+        // houver cópia, aí sim tenta a rede.
+        if (self.navigator && self.navigator.onLine === false) {
+          const offline = await caches.match(req) || await caches.match('./index.html');
+          if (offline) return offline;
+        }
+
         // Uma única busca na rede — usada tanto pra responder rápido quanto
         // pra atualizar o cache, sem duplicar a requisição.
         const buscaRede = fetch(req).then((res) => {
@@ -81,12 +89,12 @@ self.addEventListener('fetch', (event) => {
           return res;
         }).catch(() => null);
 
-        // Dá até 4 segundos pra rede responder. Se não responder nesse
-        // tempo (conexão ruim/instável), usa o cache na hora em vez de
-        // deixar a tela travada esperando — a busca continua rodando por
-        // trás pra atualizar o cache quando (se) terminar.
-        const espera4s = new Promise((resolve) => setTimeout(() => resolve(undefined), 4000));
-        const primeiro = await Promise.race([buscaRede, espera4s]);
+        // Dá até 1,5 segundo pra rede responder. Se não responder nesse
+        // tempo (sinal fraco/instável), abre a cópia guardada na hora em
+        // vez de deixar a tela travada — a busca continua por trás e
+        // atualiza o cache, então a versão nova aparece na próxima abertura.
+        const espera = new Promise((resolve) => setTimeout(() => resolve(undefined), 1500));
+        const primeiro = await Promise.race([buscaRede, espera]);
 
         if (primeiro) return primeiro; // rede respondeu a tempo
 
