@@ -267,7 +267,7 @@ body{font-family:'Barlow',sans-serif;background:#0A1628;color:var(--text);min-he
 
 
 /* TOAST */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:#0D1F3C;color:#fff;border:1px solid #1565C0;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:600;opacity:0;transition:all .22s;pointer-events:none;z-index:300;white-space:nowrap}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:#0D1F3C;color:#fff;border:1px solid #1565C0;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:600;opacity:0;transition:all .22s;pointer-events:none;z-index:600;white-space:nowrap}
 .acesso-restrito-box{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,22,40,.88);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);border-radius:0;padding:28px 24px;text-align:center}
 .ar-icon{font-size:38px;margin-bottom:8px}
 .ar-titulo{font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;font-family:'Barlow Condensed',sans-serif}
@@ -1102,6 +1102,18 @@ function salvar() {
 }
 
 async function salvarReg(reg) {
+  // 1) PRIMEIRO o que não depende de internet: atualiza o estado do cavalo
+  //    na memória (a parte síncrona de atualizarEstadoCavalo já faz isso) e
+  //    redesenha Pátio/Rua se estiverem abertos. Antes isso só acontecia
+  //    DEPOIS do servidor confirmar a gravação — e sem internet (ou com sinal
+  //    fraco) a confirmação nunca chegava, então o Pátio/Rua abertos não
+  //    mostravam a atualização.
+  atualizarEstadoCavalo(reg); // não espera: grava no servidor em segundo plano
+  if (document.getElementById('patio-overlay')?.classList.contains('open')) renderPatio();
+  if (document.getElementById('rua-overlay')?.classList.contains('open')) renderRua();
+
+  // 2) Depois grava o registro no servidor (a fila offline do Firestore
+  //    envia quando a conexão voltar).
   try {
     if (!window._fbReady) { salvar(); return; }
     await window._setDoc(window._doc('registros', String(reg.id)), reg);
@@ -1109,13 +1121,6 @@ async function salvarReg(reg) {
   } catch(e) {
     console.error('Erro ao salvar:', e);
     toast('Erro ao salvar no servidor');
-  } finally {
-    // Sempre tenta atualizar o estado do Pátio/Rua pra esse cavalo, mesmo se
-    // o Firestore estava indisponível no momento (a própria função só grava
-    // remotamente se a conexão estiver pronta) — assim uma instabilidade
-    // pontual de rede não deixa o cavalo "preso" mostrando como se nunca
-    // tivesse saído (ou entrado).
-    atualizarEstadoCavalo(reg);
   }
 }
 
@@ -1144,10 +1149,14 @@ inputData.addEventListener('change', function(e) {
 });
 document.getElementById('ano-badge').textContent = new Date().getFullYear();
 
+let _toastTimer = null;
 function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2200);
+  // Cancela o timer do aviso anterior, senão ele esconde o aviso novo antes da hora
+  // (ex: "Atualizando..." seguido de "Atualização concluída ✓")
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
 // ── Steps config ──────────────────────────────────
