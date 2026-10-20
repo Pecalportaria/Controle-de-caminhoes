@@ -4218,7 +4218,12 @@ function aplicarAjustesRua(listaRua) {
     if (!aj) return true;
 
     const ajusteDt = (aj.data || '') + (aj.hora || '');
-    const ultimoReal = _ultimoEventoPorCavalo[key];
+    // Lê direto do estado atual dos cavalos. NÃO usar _ultimoEventoPorCavalo aqui:
+    // ele só é preenchido quando o Pátio é calculado, então se a Rua abrisse
+    // antes (ou o estado fosse atualizado com só a Rua aberta) ele vinha vazio
+    // ou desatualizado, o ajuste manual antigo "vencia" o evento real e
+    // caminhões sumiam da Rua (ex: 27 em vez de 29) até alguém atualizar.
+    const ultimoReal = estadoCavalosAtual[key];
     const realDt = ultimoReal ? ultimoReal.dt : '';
 
     // Se o evento real (saída) for mais recente que o ajuste manual, o ajuste
