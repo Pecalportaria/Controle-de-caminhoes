@@ -3389,7 +3389,8 @@ async function renderHistorico() {
   const lista = fonte
     .filter(r => {
       const matchCavalo   = !cavalo   || (r.cavalo   && r.cavalo.toUpperCase().includes(cavalo));
-      const matchMotorista= !motorista|| (r.motorista&& r.motorista.toUpperCase().includes(motorista));
+      // Ignora acentos (ANDRES acha ANDRÉS e vice-versa), igual ao autocompletar
+      const matchMotorista= !motorista|| (r.motorista&& semAcento(r.motorista).includes(semAcento(motorista)));
       const matchCarreta  = !carreta  || (r.carreta  && r.carreta.toUpperCase().includes(carreta));
       const matchData     = r.data && r.data >= ini && r.data < fimExclusivo;
       return matchCavalo && matchMotorista && matchCarreta && matchData;
