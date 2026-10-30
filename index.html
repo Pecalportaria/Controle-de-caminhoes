@@ -520,7 +520,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
     <div class="form-card">
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="e-cavalo" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="e-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div></div>
-      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="e-motorista" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
+      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="e-motorista" autocomplete="off" onkeydown="this._ultimaTecla=event.key" oninput="autocompletarMotoristaEdicao(this)"></div></div>
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="e-data" onclick="this.showPicker&&this.showPicker()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"><svg class="icone-calendario-inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#90CAF9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:12px"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg></div></div>
       <div class="form-row">
         <div class="form-label">Horário</div>
@@ -1679,6 +1679,26 @@ function autocompletarMotoristaReg(inp) {
   const _ult = inp._ultimaTecla || '';
   if (_ult !== 'Backspace' && _ult !== 'Delete') {
     const candidatos = motoristas.filter(m => semAcento(m).startsWith(semAcento(digitado)) && semAcento(m) !== semAcento(digitado));
+    const match = candidatos.sort((a,b) => b.length - a.length)[0];
+    if (match) {
+      const pos = digitado.length;
+      inp.value = match;
+      inp.setSelectionRange(pos, match.length);
+    }
+  }
+  inp._ultimaTecla = '';
+}
+
+// ── Autocompletar motorista na EDIÇÃO de registro ─────
+// Mesma lógica da aba registrar, mas sem mexer nas sugestões do fluxo de
+// registro (window._sugestoes), que não têm relação com a edição.
+function autocompletarMotoristaEdicao(inp) {
+  inp.value = inp.value.toUpperCase();
+  const digitado = inp.value;
+  if (!digitado || digitado.length < 2) return;
+  const _ult = inp._ultimaTecla || '';
+  if (_ult !== 'Backspace' && _ult !== 'Delete') {
+    const candidatos = motoristasConhecidos.filter(m => semAcento(m).startsWith(semAcento(digitado)) && semAcento(m) !== semAcento(digitado));
     const match = candidatos.sort((a,b) => b.length - a.length)[0];
     if (match) {
       const pos = digitado.length;
