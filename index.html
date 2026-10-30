@@ -4130,10 +4130,23 @@ function renderPatio() {
   const total = patio.length;
   if (resumoEl) resumoEl.textContent = total + ' caminh' + (total !== 1 ? 'ões' : 'ão') + ' no pátio';
 
-  const htmlPatio = patio.map(r => { const cav = (r.cavalo||'').replace(/'/g,"\\'"); return `
+  const htmlPatio = patio.map(r => { const cav = (r.cavalo||'').replace(/'/g,"\\'"); 
+    // Caminhões CARREGADOS mostram destino + data no meio do card, com as mesmas
+    // fontes/cores da Rua (DALLEAÇO em laranja, demais em azul). Ficam de fora os
+    // textos automáticos de ajuste manual, que não são destino de verdade.
+    const destTxt = (r.destino||'').trim();
+    const destValido = destTxt && !/novo cadastro no banco de dados|cavalo sem uso/i.test(destTxt);
+    const corDestinoP = /^DALL?EACO/.test(semAcento(destTxt).replace(/\s+/g,'')) ? '#FFB74D' : '#90CAF9';
+    const meioP = (r.situacao === 'carregado' && destValido) ? `
+      <div style="flex:1;min-width:0;text-align:center;padding:0 6px;overflow:hidden">
+        <div style="font-size:13px;color:${corDestinoP};font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${destTxt}</div>
+        <div style="font-size:11.5px;color:#546E7A;white-space:nowrap;margin-top:4px">${fmtD(r.data)}</div>
+      </div>` : '';
+    return `
     <div style="background:#102040;border:1px solid ${r._ajusteManual ? '#FDD835' : '#1565C030'};border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="abrirDetalheCartao('patio', '${cav}')">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;color:#FFD600;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
-      <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;cursor:pointer" onclick="event.stopPropagation(); alterarStatusPatio('${cav}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
+      <div style="flex:0 0 auto;font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;color:#FFD600;letter-spacing:.01em;font-variant-numeric:tabular-nums;white-space:nowrap">${r.cavalo}</div>
+      ${meioP}
+      <span class="pill ${r.situacao==='carregado'?'pill-car':'pill-vaz'}" style="font-size:14px;padding:4px 12px;flex:0 0 auto;cursor:pointer" onclick="event.stopPropagation(); alterarStatusPatio('${cav}', '${r.situacao}')" title="Toque para trocar">${r.situacao==='carregado'?'CARREGADO':'VAZIO'}</span>
     </div>
   `; }).join('');
   // Só mexe no DOM se algo mudou (evita piscar/atrapalhar toques nos redesenhos automáticos)
