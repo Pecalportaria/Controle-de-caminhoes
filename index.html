@@ -2158,6 +2158,13 @@ function editarHora(tipo) {
 
   function salvarValor() {
     const v = inp.value.trim();
+    if (v && !horaValida(v)) {
+      // Incompleta/inválida (ex: 14:1): não aplica, limpa e deixa digitar de novo
+      avisoHoraErrada(v);
+      inp.value = '';
+      setTimeout(() => inp.focus(), 50);
+      return false;
+    }
     if (v) {
       vals.standBy = false;
       if (tipo === 'entrada') {
@@ -2173,13 +2180,13 @@ function editarHora(tipo) {
       }
     }
     wrap.style.display = 'none';
+    return true;
   }
 
   inp.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      salvarValor();
-      avancarStep();
+      if (salvarValor()) avancarStep();
     }
   });
   inp.addEventListener('blur', function() { salvarValor(); });
@@ -2278,6 +2285,8 @@ function confirmarSalvar() {
   if (!vals.motorista) { toast('Informe o motorista'); return; }
   if (!vals.data) { toast('Informe a data'); return; }
   if (!vals.entrada && !vals.saida && !vals.standBy) { toast('Informe entrada, saída ou stand by'); return; }
+  if (vals.entrada && !horaValida(vals.entrada)) { avisoHoraErrada(vals.entrada); return; }
+  if (vals.saida && !horaValida(vals.saida)) { avisoHoraErrada(vals.saida); return; }
   if (!vals.destino && !vals.destinoPendente) { toast('Informe o destino'); return; }
 
   // Verificar inconsistências com base no histórico
@@ -2507,12 +2516,22 @@ async function avancarStep() {
 }
 
 // Máscara de hora
+const fmtHoraDigitos = d => d.length >= 3 ? d.slice(0,2)+':'+d.slice(2) : d;
+function horaValida(v) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(v || ''); }
+function avisoHoraErrada(v) { toast('⚠️ Hora digitada errada: ' + v + ' — use de 00:00 a 23:59'); }
 function maskHora(el) {
   el.addEventListener('input', function() {
-    let v = this.value.replace(/\D/g,'');
-    if (v.length > 4) v = v.slice(0,4);
-    if (v.length >= 3) v = v.slice(0,2)+':'+v.slice(2);
-    this.value = v;
+    const digitos = this.value.replace(/\D/g,'').slice(0,4);
+    // Aceita dígito a dígito e PARA no primeiro que tornaria a hora impossível:
+    // hora > 23 (ex: 74, 24) ou dezena dos minutos > 5 (ex: 14:7).
+    let ok = '';
+    for (const d of digitos) {
+      const t = ok + d;
+      const impossivel = (t.length === 2 && Number(t) > 23) || (t.length === 3 && Number(t[2]) > 5);
+      if (impossivel) { avisoHoraErrada(fmtHoraDigitos(digitos)); break; }
+      ok = t;
+    }
+    this.value = fmtHoraDigitos(ok);
   });
 }
 // Horas gerenciadas dinamicamente no painel
@@ -2978,6 +2997,8 @@ async function salvarEdicao() {
   if (!mot)                  { toast('Informe o motorista'); return; }
   if (!dat)                  { toast('Informe a data'); return; }
   if (!dst)                  { toast('Informe o destino'); return; }
+  if (ent && !horaValida(ent)) { avisoHoraErrada(ent); return; }
+  if (sai && !horaValida(sai)) { avisoHoraErrada(sai); return; }
   if (!_regEmEdicao || _regEmEdicao.id !== editId) { toast('Registro não encontrado'); return; }
   const idx = regs.findIndex(x => x.id === editId);
   const regAtualizado = {..._regEmEdicao, cavalo:cav, carreta:car, motorista:mot, data:dat, entrada:ent, saida:sai, situacao:editSit, destino:dst, standBy, carretaPendente:false, destinoPendente:false};
