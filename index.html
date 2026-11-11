@@ -1868,7 +1868,13 @@ async function recalcularEstadoCavalo(cavalo) {
     });
     const dt = maisRecente.data + (maisRecente.entrada || maisRecente.saida || '');
     const novoEstado = { ...maisRecente, dt };
+    const atual = estadoCavalosAtual[key];
+    const chaves = Object.keys(novoEstado);
+    const igual = !!atual && Object.keys(atual).length === chaves.length &&
+      chaves.every(k => JSON.stringify(atual[k]) === JSON.stringify(novoEstado[k]));
     estadoCavalosAtual[key] = novoEstado;
+    // Estado já correto no banco: não regrava (mais rápido e gasta menos cota)
+    if (igual) return;
     await window._setDoc(window._doc('estadoCavalos', key), novoEstado);
   } catch (err) {
     console.error('Erro ao recalcular estado do cavalo:', err);
@@ -4237,8 +4243,11 @@ async function recalcularEstadoAba() {
   if (!placas.size) { toast('Nada para atualizar'); return; }
   toast('Atualizando ' + placas.size + ' ' + (placas.size !== 1 ? 'caminhões' : 'caminhão') + '...');
   try {
-    for (const placa of placas) {
-      await recalcularEstadoCavalo(placa);
+    // Em paralelo, 8 de cada vez (antes era um caminhão por vez, esperando cada
+    // consulta + gravação terminar antes de começar a próxima).
+    const lista = [...placas];
+    for (let i = 0; i < lista.length; i += 8) {
+      await Promise.all(lista.slice(i, i + 8).map(p => recalcularEstadoCavalo(p)));
     }
     renderPatio();
     renderRua();
