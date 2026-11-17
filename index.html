@@ -1468,7 +1468,7 @@ function aplicarGateAcesso() {
 aplicarGateAcesso();
 
 // Botão da barra de turno: se logado, mostra opção de logout; se não, abre login
-function abrirLoginTurno() {
+function abrirLoginTurno(semFoco) {
   if (!acessoLiberado()) {
     toast('Desbloqueie o acesso restrito antes de fazer login');
     return;
@@ -1494,7 +1494,7 @@ function abrirLoginTurno() {
     porteiros.map(p => '<option value="'+p.nome+'">'+p.nome+'</option>').join('');
   document.getElementById('login-senha').value = '';
   document.getElementById('login-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('login-senha').focus(), 100);
+  if (!semFoco) setTimeout(() => document.getElementById('login-senha').focus(), 100);
 }
 
 function cancelarLoginTurno() {
@@ -4469,7 +4469,7 @@ function construirPassosTour() {
   if (!acessoLiberado()) {
     passos.push({ target: 'acesso-restrito-box', titulo: 'Área restrita', texto: 'Na primeira vez, é preciso digitar a senha de acesso para liberar a navegação (modo leitura). Depois disso o restante do app fica disponível.' });
   } else {
-    passos.push({ target: null, aoEntrar: () => { if (getTurno() || getPorteiros().length) abrirLoginTurno(); }, titulo: 'Login do porteiro', texto: 'Aqui você faz login com seu nome e senha para iniciar o turno. Sem login, o app funciona só em modo leitura, sem poder registrar nada. Só um aparelho por vez pode ficar com o turno aberto.' });
+    passos.push({ target: null, aoEntrar: () => { document.activeElement && document.activeElement.blur(); if (getTurno() || getPorteiros().length) abrirLoginTurno(true); }, titulo: 'Login do porteiro', texto: 'Aqui você faz login com seu nome e senha para iniciar o turno. Sem login, o app funciona só em modo leitura, sem poder registrar nada. Só um aparelho por vez pode ficar com o turno aberto.' });
   }
 
   passos.push(
