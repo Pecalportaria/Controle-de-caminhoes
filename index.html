@@ -391,7 +391,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
   <div class="acesso-restrito-box" id="acesso-restrito-box" style="display:none">
     <div class="ar-icon">🔒</div>
     <div class="ar-titulo">Área restrita</div>
-    <div class="ar-sub">Digite a senha para navegar pelo aplicativo (modo somente leitura, sem acesso a cadastros ou alterações).</div>
+    <div class="ar-sub">Digite a senha para navegar pelo aplicativo (modo somente leitura, sem acesso a cadastros ou alterações) ou a senha da portaria para fazer login.</div>
     <div class="ar-input-wrap">
       <input type="password" id="ar-senha" class="ar-input" placeholder="Senha" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarSenhaLeitura()">
       <button type="button" class="ar-eye" id="ar-eye-btn" onclick="toggleSenhaVisivel()" aria-label="Mostrar senha">
@@ -1406,7 +1406,11 @@ async function confirmarSenhaLeitura() {
   const senha = campo ? campo.value : '';
   // A senha mestra também abre o app na tela inicial, com acesso de administrador
   const admin = senha !== 'pecal' && await ehSenhaMestra(senha);
-  if (senha !== 'pecal' && !admin) {
+  // Senha de porteiro cadastrado: faz login automático se não houver turno ativo;
+  // se já houver um porteiro logado, vale como a senha de consulta (somente leitura)
+  const porteiro = (senha !== 'pecal' && !admin && senha)
+    ? getPorteiros().find(x => x.senha && x.senha === senha) : null;
+  if (senha !== 'pecal' && !admin && !porteiro) {
     toast('Senha incorreta!');
     if (campo) { campo.value = ''; campo.type = 'password'; }
     const btn = document.getElementById('ar-eye-btn');
@@ -1419,10 +1423,21 @@ async function confirmarSenhaLeitura() {
   if (admin) {
     sessionStorage.setItem('acesso_admin', '1');
     toast('Acesso de administrador liberado');
+  } else if (porteiro && window._fbReady && _turnoCarregado && !turnoAtivo()) {
+    try {
+      const sid = gerarSid();
+      await window._setDoc(window._doc('config', 'turno'), { nome: porteiro.nome, inicio: Date.now(), sid });
+      localStorage.setItem('meu_turno_sid', sid);
+      toast('Turno iniciado — ' + porteiro.nome);
+    } catch (e) {
+      console.error('Erro ao iniciar turno:', e);
+      toast('Acesso liberado — modo somente leitura (não foi possível iniciar o turno)');
+    }
   } else {
     toast('Acesso liberado — modo somente leitura');
   }
   aplicarGateAcesso();
+  agendarTourPrimeiraVez();
 }
 
 function toggleSenhaVisivel() {
@@ -1448,6 +1463,7 @@ function aplicarGateAcesso() {
   const liberado = acessoLiberado() || aguardandoConfirmacao;
   box.style.display = liberado ? 'none' : 'flex';
   document.body.classList.toggle('bloqueado', !liberado);
+  if (acessoLiberado() && typeof agendarTourPrimeiraVez === 'function') agendarTourPrimeiraVez();
 }
 aplicarGateAcesso();
 
@@ -4453,12 +4469,12 @@ function construirPassosTour() {
   if (!acessoLiberado()) {
     passos.push({ target: 'acesso-restrito-box', titulo: 'Área restrita', texto: 'Na primeira vez, é preciso digitar a senha de acesso para liberar a navegação (modo leitura). Depois disso o restante do app fica disponível.' });
   } else {
-    passos.push({ target: 'turno-bar', titulo: 'Login do porteiro', texto: 'Aqui você faz login com seu nome e senha para iniciar o turno. Sem login, o app funciona só em modo leitura, sem poder registrar nada. Só um aparelho por vez pode ficar com o turno aberto.' });
+    passos.push({ target: null, aoEntrar: () => { if (getTurno() || getPorteiros().length) abrirLoginTurno(); }, titulo: 'Login do porteiro', texto: 'Aqui você faz login com seu nome e senha para iniciar o turno. Sem login, o app funciona só em modo leitura, sem poder registrar nada. Só um aparelho por vez pode ficar com o turno aberto.' });
   }
 
   passos.push(
     { target: 'tab-btn-registrar', titulo: 'Aba Registrar', texto: 'Essa é a tela inicial — é aqui que se registra a entrada ou a saída de um caminhão. Só é possível registrar com um porteiro logado; sem login, o app fica somente para consulta.', aoEntrar: () => showTab('registrar') },
-    { target: 'placa-click-area', titulo: 'Toque na PLACA do caminhão', texto: 'Toque na PLACA do caminhão pra abrir o formulário de registro. Ele vai por etapas: horário, data, placa do cavalo, motorista, destino, situação (carregado/vazio) e placa da carreta. Em cada etapa, o botão ? no topo explica o que fazer — por exemplo, se a placa não estiver no cadastro (o app pede confirmação com senha) ou se você deixar um campo em branco (fica 🕓 pendente).' }
+    { target: 'placa-click-area', titulo: 'Aba Registrar', texto: 'Toque na PLACA do caminhão pra abrir o formulário de registro. Ele vai por etapas: horário, data, placa do cavalo, motorista, destino, situação (carregado/vazio) e placa da carreta. Em cada etapa, o botão ? no topo explica o que fazer — por exemplo, se a placa não estiver no cadastro (o app pede confirmação com senha) ou se você deixar um campo em branco (fica 🕓 pendente).' }
   );
 
   if (acessoLiberado()) {
@@ -4480,6 +4496,7 @@ function construirPassosTour() {
 }
 
 function iniciarTour() {
+  if (!acessoLiberado()) { toast('Digite a senha para acessar o aplicativo'); return; }
   tourPassos = construirPassosTour();
   tourIndex = 0;
   document.getElementById('tour-overlay').classList.add('open');
@@ -4490,6 +4507,8 @@ function fecharTour(marcarVisto) {
   document.getElementById('tour-overlay').classList.remove('open');
   document.getElementById('patio-overlay').classList.remove('open');
   document.getElementById('rua-overlay').classList.remove('open');
+  document.getElementById('login-overlay').classList.remove('open');
+  document.getElementById('turno-ativo-overlay').classList.remove('open');
   document.getElementById('tour-spotlight').style.opacity = '0';
   document.getElementById('config-overlay').classList.remove('open');
   if (marcarVisto) localStorage.setItem('tour_visto', '1');
@@ -4515,6 +4534,8 @@ function renderPassoTour() {
   const passo = tourPassos[tourIndex];
   document.getElementById('patio-overlay').classList.remove('open');
   document.getElementById('rua-overlay').classList.remove('open');
+  document.getElementById('login-overlay').classList.remove('open');
+  document.getElementById('turno-ativo-overlay').classList.remove('open');
   if (passo.aoEntrar) passo.aoEntrar();
 
   document.getElementById('tour-titulo').textContent = passo.titulo;
@@ -4619,8 +4640,14 @@ new MutationObserver(() => {
 }).observe(document.getElementById('tour-overlay'), { attributes: true, attributeFilter: ['class'] });
 
 // Abre o tour sozinho na primeira vez que o app é usado neste aparelho
+function agendarTourPrimeiraVez() {
+  if (localStorage.getItem('tour_visto') || window._tourAgendado) return;
+  if (!acessoLiberado()) return;
+  window._tourAgendado = true;
+  setTimeout(() => { if (acessoLiberado()) iniciarTour(); }, 700);
+}
 if (!localStorage.getItem('tour_visto')) {
-  setTimeout(() => { if (typeof iniciarTour === 'function') iniciarTour(); }, 700);
+  agendarTourPrimeiraVez();
 }
 
 renderLista();
