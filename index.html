@@ -519,7 +519,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
     </div>
     <div class="form-card">
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="e-cavalo" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
-      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="e-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div></div>
+      <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="e-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this);if(carretaEhCavalo(this.value))setEditSit('vazio')"></div></div>
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="e-motorista" autocomplete="off" onkeydown="this._ultimaTecla=event.key" oninput="autocompletarMotoristaEdicao(this)"></div></div>
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="e-data" onclick="this.showPicker&&this.showPicker()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"><svg class="icone-calendario-inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#90CAF9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:12px"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg></div></div>
       <div class="form-row">
@@ -529,7 +529,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
           <div class="hora-col" style="position:relative"><span class="hora-label" onclick="document.getElementById('e-saida').focus()" style="cursor:text">Saída</span><input type="text" id="e-saida" placeholder="00:00" maxlength="5" inputmode="numeric" onclick="this.focus()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><span id="e-standby-aviso" style="display:none;position:absolute;right:10px;bottom:9px;font-size:16px;pointer-events:none">🕓</span></div>
         </div>
       </div>
-      <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="e-sit-car" onclick="setEditSit('carregado')">Carregado</button><button class="sit-btn" id="e-sit-vaz" onclick="setEditSit('vazio')">Vazio</button></div></div>
+      <div class="form-row"><div class="form-label">Situação</div><div class="sit-inline"><button class="sit-btn" id="e-sit-car" onclick="setEditSit('carregado',true)">Carregado</button><button class="sit-btn" id="e-sit-vaz" onclick="setEditSit('vazio')">Vazio</button></div></div>
       <div class="form-row" onclick="this.querySelector('input')?.focus()" style="cursor:text;border-bottom:none"><div class="form-label">Destino</div><div class="form-input-wrap"><input type="text" id="e-destino" autocomplete="off" onkeydown="this.dataset.lastKey=event.key" oninput="this.value=this.value.toUpperCase();this.style.color='';this.dataset.sugestao='0';document.getElementById('e-destino-sugestao-hint').style.display='none';if(this.dataset.lastKey!=='Backspace'&&this.dataset.lastKey!=='Delete')autocompletarDestino(this);" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent;position:relative;z-index:2"></div></div>
       <div id="e-destino-sugestao-hint" style="display:none;font-size:11px;color:#43A047;padding:0 14px 10px;letter-spacing:.04em">✦ Sugestão baseada no histórico deste cavalo — toque para editar</div>
     </div>
@@ -546,7 +546,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
     </div>
     <div class="form-card">
       <div class="form-row"><div class="form-label">Cavalo</div><div class="form-input-wrap"><input type="text" id="r-cavalo" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></div></div>
-      <div class="form-row" style="position:relative"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="r-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this)"></div><span id="r-carreta-pendente-aviso" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🕓</span></div>
+      <div class="form-row" style="position:relative"><div class="form-label">Carreta</div><div class="form-input-wrap"><input type="text" id="r-carreta" maxlength="7" autocomplete="off" oninput="limiteCarreta(this);_renderRevisaoSit()"></div><span id="r-carreta-pendente-aviso" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🕓</span></div>
       <div class="form-row"><div class="form-label">Motorista</div><div class="form-input-wrap"><input type="text" id="r-motorista" autocomplete="off" onkeydown="this._ultimaTecla=event.key" oninput="autocompletarMotoristaReg(this)"></div></div>
       <div class="form-row"><div class="form-label">Data</div><div class="form-input-wrap"><input type="date" id="r-data" onclick="this.showPicker&&this.showPicker()" style="width:100%;padding:12px 14px;border:none;outline:none;font-family:'Barlow',sans-serif;font-size:15px;color:#fff;background:transparent"><svg class="icone-calendario-inline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#90CAF9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:12px"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg></div></div>
       <div class="form-row">
@@ -883,7 +883,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
       <button onclick="tourPular()" style="background:none;border:none;color:#546E7A;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;padding:6px">Pular tour ✕</button>
     </div>
     <div id="tour-titulo" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:#fff;margin:6px 0 8px;letter-spacing:.02em"></div>
-    <div id="tour-texto" style="font-size:14px;color:#B0BEC5;line-height:1.5;margin-bottom:20px"></div>
+    <div id="tour-texto" style="white-space:pre-line;font-size:14px;color:#B0BEC5;line-height:1.5;margin-bottom:20px"></div>
     <div style="display:flex;gap:10px;align-items:center">
       <button id="tour-btn-voltar" onclick="tourVoltar()" style="padding:12px 16px;background:transparent;color:#90A4AE;border:1px solid #1565C060;border-radius:var(--radius);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase">Voltar</button>
       <span id="tour-progresso" style="flex:1;text-align:center;font-size:12px;color:#546E7A;letter-spacing:.04em"></span>
@@ -1280,6 +1280,7 @@ async function sha256Hex(texto) {
 
 async function ehSenhaMestra(s) {
   if (!s) return false;
+  if (s === '__ADMIN__') return acessoAdmin(); // sessão de administrador já validada na tela inicial
   try {
     const hash = await sha256Hex(s);
     return hash === SENHA_MESTRA_HASH;
@@ -1396,10 +1397,16 @@ function acessoLiberado() {
 const EYE_OPEN = '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path><circle cx="12" cy="12" r="3"></circle>';
 const EYE_CLOSED = '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 5c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
 
-function confirmarSenhaLeitura() {
+function acessoAdmin() {
+  return sessionStorage.getItem('acesso_admin') === '1';
+}
+
+async function confirmarSenhaLeitura() {
   const campo = document.getElementById('ar-senha');
   const senha = campo ? campo.value : '';
-  if (senha !== 'pecal') {
+  // A senha mestra também abre o app na tela inicial, com acesso de administrador
+  const admin = senha !== 'pecal' && await ehSenhaMestra(senha);
+  if (senha !== 'pecal' && !admin) {
     toast('Senha incorreta!');
     if (campo) { campo.value = ''; campo.type = 'password'; }
     const btn = document.getElementById('ar-eye-btn');
@@ -1409,7 +1416,12 @@ function confirmarSenhaLeitura() {
     return;
   }
   sessionStorage.setItem('acesso_leitura', '1');
-  toast('Acesso liberado — modo somente leitura');
+  if (admin) {
+    sessionStorage.setItem('acesso_admin', '1');
+    toast('Acesso de administrador liberado');
+  } else {
+    toast('Acesso liberado — modo somente leitura');
+  }
   aplicarGateAcesso();
 }
 
@@ -2202,10 +2214,20 @@ function editarHora(tipo) {
 // ── Revisão antes de salvar ───────────────────────────
 let revisaoSit = 'carregado';
 
+function _revisaoSemCarreta() {
+  if (vals.carretaPendente) return false;
+  const v = (document.getElementById('r-carreta').value || '').trim();
+  return v === '' || carretaEhCavalo(v);
+}
+function _renderRevisaoSit() {
+  const ef = _revisaoSemCarreta() ? 'vazio' : revisaoSit;
+  document.getElementById('r-sit-car').className = 'sit-btn'+(ef==='carregado'?' on-car':'');
+  document.getElementById('r-sit-vaz').className = 'sit-btn'+(ef==='vazio'?' on-vaz':'');
+}
 function setRevisaoSit(s) {
+  if (s === 'carregado' && _revisaoSemCarreta()) { toast('Cavalo sem carreta é sempre Vazio'); return; }
   revisaoSit = s;
-  document.getElementById('r-sit-car').className = 'sit-btn'+(s==='carregado'?' on-car':'');
-  document.getElementById('r-sit-vaz').className = 'sit-btn'+(s==='vazio'?' on-vaz':'');
+  _renderRevisaoSit();
 }
 
 function abrirRevisao() {
@@ -2217,6 +2239,7 @@ function abrirRevisao() {
   document.getElementById('r-entrada').value   = vals.entrada   || '';
   document.getElementById('r-saida').value     = vals.standBy ? '' : (vals.saida || '');
   document.getElementById('r-destino').value   = vals.destinoPendente ? '' : (vals.destino || '');
+  if (!vals.carretaPendente && carretaEhCavalo(vals.carreta)) sit = 'vazio';
   setRevisaoSit(sit);
   // Máscara nas horas
   ['r-entrada','r-saida'].forEach(id => {
@@ -2285,7 +2308,7 @@ function confirmarSalvar() {
   vals.entrada   = document.getElementById('r-entrada').value.trim();
   vals.saida     = vals.standBy ? '' : document.getElementById('r-saida').value.trim();
   vals.destino   = vals.destinoPendente ? '' : document.getElementById('r-destino').value.trim();
-  sit = revisaoSit;
+  sit = situacaoPorCarreta(vals.carreta, revisaoSit);
   // Validar campos obrigatórios
   if (!vals.cavalo || vals.cavalo.length !== 4) { toast('Placa do cavalo: 4 caracteres'); return; }
   if (!vals.motorista) { toast('Informe o motorista'); return; }
@@ -2553,6 +2576,12 @@ function validarCarreta(car) {
   return esp.includes(car) || (/^[0-9]/.test(car) && car.length === 4);
 }
 
+// Regra: cavalo sem carreta (CAVALO — não Truck nem Bitrem) está SEMPRE vazio,
+// tanto na entrada quanto na saída.
+function carretaEhCavalo(c) { return (c || '').trim().toUpperCase() === 'CAVALO'; }
+function situacaoPorCarreta(c, sit) { return carretaEhCavalo(c) ? 'vazio' : sit; }
+function sitEfetiva(r) { return situacaoPorCarreta(r.carreta, r.situacao); }
+
 function setSit(s) {
   sit = s;
   const bc=document.getElementById('sit-car');
@@ -2561,7 +2590,12 @@ function setSit(s) {
   if(bv) bv.className='painel-sit-btn'+(s==='vazio'?' on-vaz':'');
 }
 
-function setEditSit(s) {
+function setEditSit(s, clique) {
+  const c = (document.getElementById('e-carreta').value || '').trim();
+  if (s === 'carregado' && carretaEhCavalo(c)) {
+    if (clique) toast('Cavalo sem carreta é sempre Vazio');
+    s = 'vazio';
+  }
   editSit = s;
   document.getElementById('e-sit-car').className = 'sit-btn'+(s==='carregado'?' on-car':'');
   document.getElementById('e-sit-vaz').className = 'sit-btn'+(s==='vazio'?' on-vaz':'');
@@ -2654,7 +2688,7 @@ async function addReg() {
     cavalo: vals.cavalo, carreta: vals.carretaPendente ? '' : (vals.carreta || 'CAVALO'),
     motorista: vals.motorista, data: vals.data,
     entrada: vals.entrada, saida: vals.saida,
-    situacao: sit, destino: vals.destinoPendente ? '' : vals.destino,
+    situacao: situacaoPorCarreta(vals.carretaPendente ? '' : (vals.carreta || 'CAVALO'), sit), destino: vals.destinoPendente ? '' : vals.destino,
     standBy: !!vals.standBy,
     carretaPendente: !!vals.carretaPendente,
     destinoPendente: !!vals.destinoPendente
@@ -3007,7 +3041,7 @@ async function salvarEdicao() {
   if (sai && !horaValida(sai)) { avisoHoraErrada(sai); return; }
   if (!_regEmEdicao || _regEmEdicao.id !== editId) { toast('Registro não encontrado'); return; }
   const idx = regs.findIndex(x => x.id === editId);
-  const regAtualizado = {..._regEmEdicao, cavalo:cav, carreta:car, motorista:mot, data:dat, entrada:ent, saida:sai, situacao:editSit, destino:dst, standBy, carretaPendente:false, destinoPendente:false};
+  const regAtualizado = {..._regEmEdicao, cavalo:cav, carreta:car, motorista:mot, data:dat, entrada:ent, saida:sai, situacao:situacaoPorCarreta(car, editSit), destino:dst, standBy, carretaPendente:false, destinoPendente:false};
   if (idx !== -1) {
     // Registro dentro dos últimos 30 dias: atualiza também o array local,
     // pra tela principal refletir a mudança na hora.
@@ -3119,9 +3153,9 @@ function renderListaComDados(listaOriginal, fd) {
     const labelMovimento = r.standBy ? '🕓 Stand By' : (temEntrada ? 'Entrada' : 'Saída');
     
     // Determinar situação (carregado ou vazio)
-    const situacao = r.situacao === 'carregado' ? 'Carregado' : 'Vazio';
-    const corBorderSituacao = r.situacao === 'carregado' ? '#43A047' : '#E53935';
-    const corFundoSituacao = r.situacao === 'carregado' ? '#2E7D32' : '#C62828';
+    const situacao = sitEfetiva(r) === 'carregado' ? 'Carregado' : 'Vazio';
+    const corBorderSituacao = sitEfetiva(r) === 'carregado' ? '#43A047' : '#E53935';
+    const corFundoSituacao = sitEfetiva(r) === 'carregado' ? '#2E7D32' : '#C62828';
     
     return `
     <div class="reg-card">
@@ -3484,7 +3518,7 @@ function renderHistoricoLista(lista, el) {
             '<div class="hist-destino">'+(r.destino||'—')+'</div>'+
           '</div>'+
           '<div class="hist-hora">'+(r.entrada?'<span style="font-size:12px;color:#42A5F5;display:block;text-align:right">ENT</span>'+r.entrada:r.saida?'<span style="font-size:12px;color:#FFB74D;display:block;text-align:right">SAÍDA</span>'+r.saida:'—')+'</div>'+
-          '<div class="hist-sit '+(r.situacao==='carregado'?'car':'vaz')+'">'+(r.situacao==='carregado'?'Car':'Vaz')+'</div>'+
+          '<div class="hist-sit '+(sitEfetiva(r)==='carregado'?'car':'vaz')+'">'+(sitEfetiva(r)==='carregado'?'Car':'Vaz')+'</div>'+
         '</div>'
       ).join('')+
     '</div>'
@@ -3496,6 +3530,7 @@ function _escolherTipoCarreta(tipo) {
   document.getElementById('carreta-tipo-overlay').classList.remove('open');
   vals.carreta = tipo;
   vals.carretaPendente = false;
+  if (tipo === 'CAVALO') sit = 'vazio';
   abrirRevisao();
 }
 
@@ -3510,6 +3545,8 @@ function _definirCarretaPendente() {
 let _senhaCallback = null;
 
 function pedirSenha(titulo, subtitulo, callback, alfanumerico) {
+  // Administrador (senha mestra na tela inicial) não precisa digitar a senha mestra de novo
+  if (acessoAdmin() && /senha mestra/i.test(subtitulo || '') && typeof callback === 'function') { callback('__ADMIN__'); return; }
   document.getElementById('senha-titulo').textContent = titulo;
   document.getElementById('senha-subtitulo').textContent = subtitulo;
   const campo = document.getElementById('senha-input');
@@ -3643,7 +3680,8 @@ function calcularPatio() {
   // e depois outro cavalo B saiu com a mesma carreta X em data/hora >= entrada do A,
   // então cavalo A deve aparecer como VAZIO (a carreta foi embora com outro)
   return noPatio.map(reg => {
-    if (!reg.carreta || reg.carreta === 'CAVALO' || reg.situacao !== 'carregado') return reg;
+    if (carretaEhCavalo(reg.carreta)) return { ...reg, situacao: 'vazio' };
+    if (!reg.carreta || reg.situacao !== 'carregado') return reg;
 
     const carretaReg = reg.carreta.toUpperCase();
     const dtEntrada = reg.data + (reg.entrada || '');
@@ -4070,6 +4108,8 @@ function alterarStatusPatio(cavalo, situacaoAtual) {
   // de login sem saída (sem ter a senha de nenhum porteiro), dando a
   // impressão de que o app tinha travado.
   if (isReadOnly()) { toast('Alterar status é uma ação restrita a porteiros logados'); return; }
+  const _item = aplicarAjustesPatio(calcularPatio()).find(x => (x.cavalo || '').toUpperCase() === (cavalo || '').toUpperCase());
+  if (_item && carretaEhCavalo(_item.carreta)) { toast('Cavalo sem carreta é sempre Vazio'); return; }
   const novoStatus = situacaoAtual === 'carregado' ? 'vazio' : 'carregado';
   const t = getTurno();
   if (!t) { toast('Nenhum porteiro logado — faça login primeiro'); abrirLoginTurno(); return; }
@@ -4108,7 +4148,7 @@ function aplicarStatusAtualPatio(lista) {
   return lista.map(r => {
     const key = r.cavalo.toUpperCase();
     const ov = statusAtualPatio.find(s => (s.cavalo || '').toUpperCase() === key);
-    if (!ov) return r;
+    if (!ov || carretaEhCavalo(r.carreta)) return r;
     const dtItem = (r.data || '') + (r.entrada || '');
     const dtOverride = (ov.data || '') + (ov.hora || '');
     if (dtOverride > dtItem) {
@@ -4266,7 +4306,7 @@ function calcularRua() {
 
   // Apenas cavalos cujo último movimento foi saída E não tem entrada registrada junto
   // (mesma proteção usada no pátio, para casos de registro com os dois campos preenchidos)
-  return Object.values(porCavalo).filter(r => r.saida && !r.entrada);
+  return Object.values(porCavalo).filter(r => r.saida && !r.entrada).map(r => carretaEhCavalo(r.carreta) ? { ...r, situacao: 'vazio' } : r);
 }
 
 // Aplica os ajustes manuais também na Rua: se um ajuste "incluir no pátio" for mais
@@ -4406,7 +4446,8 @@ let tourIndex = 0;
 
 function construirPassosTour() {
   const passos = [
-    { target: null, titulo: 'Bem-vindo ao TransPecal! 🚛', texto: 'Vamos fazer um tour rápido pelas principais telas do app. Você pode pular quando quiser, tocando em "Pular tour".' }
+    { target: null, titulo: 'Bem vindo ao Controle de Entrada e Saída de Caminhões da Transpecal', texto: 'Vamos fazer um tour rápido pelas principais telas do app. Você pode pular quando quiser, tocando em "Pular tour".' },
+    { target: null, titulo: 'Níveis de acesso', texto: 'O aplicativo possui diferentes níveis de acesso (consultas somente leitura para qualquer usuário/registros e edições para porteiros/acesso irrestrito para a gerência) e para cada nível o sistema exige uma senha específica.' }
   ];
 
   if (!acessoLiberado()) {
@@ -4417,17 +4458,17 @@ function construirPassosTour() {
 
   passos.push(
     { target: 'tab-btn-registrar', titulo: 'Aba Registrar', texto: 'Essa é a tela inicial — é aqui que se registra a entrada ou a saída de um caminhão. Só é possível registrar com um porteiro logado; sem login, o app fica somente para consulta.', aoEntrar: () => showTab('registrar') },
-    { target: 'placa-click-area', titulo: 'Toque no caminhão', texto: 'Toque na imagem do caminhão pra abrir o formulário de registro. Ele vai por etapas: horário, data, placa do cavalo, motorista, destino, situação (carregado/vazio) e placa da carreta. Em cada etapa, o botão ? no topo explica o que fazer — por exemplo, se a placa não estiver no cadastro (o app pede confirmação com senha) ou se você deixar um campo em branco (fica 🕓 pendente).' }
+    { target: 'placa-click-area', titulo: 'Toque na PLACA do caminhão', texto: 'Toque na PLACA do caminhão pra abrir o formulário de registro. Ele vai por etapas: horário, data, placa do cavalo, motorista, destino, situação (carregado/vazio) e placa da carreta. Em cada etapa, o botão ? no topo explica o que fazer — por exemplo, se a placa não estiver no cadastro (o app pede confirmação com senha) ou se você deixar um campo em branco (fica 🕓 pendente).' }
   );
 
   if (acessoLiberado()) {
     passos.push(
-      { target: 'tab-btn-lista', titulo: 'Aba Registros', texto: 'Aqui ficam os registros do dia (troque a data pra ver outro). Toque no cavalo, na carreta ou no motorista pra ver o histórico. Itens com 🕓 ficam pendentes: toque neles pra completar, ou use "Confirmar saída agora" no Stand By. Editar e Remover pedem senha.', aoEntrar: () => showTab('lista') },
-      { target: 'btn-patio', titulo: 'Pátio', texto: 'Mostra os caminhões que estão dentro do pátio agora. Toque num caminhão pra ver os detalhes, ou no status (Carregado/Vazio) pra alternar. Lá dentro, "↻ Atualizar status" recalcula a lista, o ? tira dúvidas e o ⚙️ faz ajuste manual (raro, pede senha de porteiro).' },
-      { target: 'btn-rua', titulo: 'Rua', texto: 'Mostra os caminhões que já saíram e ainda não retornaram. Toque num caminhão pra ver data e hora da saída, motorista e destino. O botão "↻ Atualizar status" recalcula a lista, e o ? explica a tela.' },
-      { target: 'btn-config', titulo: 'Configurações', texto: 'Backup, exportar registros (você escolhe o período De/Até e o formato: Excel, PDF ou HTML) e encerrar turno remotamente ficam numa área restrita, protegida pela senha mestra.' },
-      { target: 'btn-banco-placas', titulo: 'Banco de placas', texto: 'Cadastro das placas dos cavalos da frota — consulta livre para qualquer um. Incluir uma placa pede a senha do porteiro logado ou a senha mestra; excluir só é permitido com a senha mestra.', aoEntrar: () => abrirConfiguracoes() },
-      { target: 'tab-btn-historico', titulo: 'Aba Histórico', texto: 'Aqui você busca registros antigos filtrando por cavalo, carreta ou motorista, com um período De/Até. Sem escolher nenhuma data, mostra sempre os últimos 30 dias.', aoEntrar: () => { document.getElementById('config-overlay').classList.remove('open'); showTab('historico'); } }
+      { target: 'tab-btn-lista', titulo: 'Aba Registros', texto: 'Aqui ficam os registros do dia: a tela mostra o último registro efetuado, basta rolar a tela para ver os demais (troque a data pra ver outro). Toque no cavalo, na carreta ou no motorista pra ver o histórico. Itens com 🕓 estão pendentes: toque neles pra completar, ou use "Confirmar saída agora" no Stand By. As funções Editar e Remover pedem senha.', aoEntrar: () => showTab('lista') },
+      { target: 'btn-patio', titulo: 'Pátio', texto: 'Mostra os caminhões que estão dentro do pátio agora. Toque num caminhão pra ver os detalhes, ou no status (Carregado/Vazio) para alterar, mediante uso de senha. Na parte superior da tela, os ícones "?" tira dúvidas e "⚙️" faz ajuste manual (somente com uso de senha de usuário da portaria); "↻ Atualizar status" recalcula a lista.', aoEntrar: () => abrirPatio() },
+      { target: 'btn-rua', titulo: 'Rua', texto: 'Mostra os caminhões que já saíram e ainda não retornaram. Toque num caminhão pra ver data e hora da saída, motorista e destino. O botão "↻ Atualizar status" recalcula a lista, e o (?) explica a tela.', aoEntrar: () => abrirRua() },
+      { target: 'btn-config', titulo: 'Configurações', texto: 'Backup, exportar registros (você escolhe o período De/Até e o formato: Excel, PDF ou HTML) e encerrar turno remotamente ficam numa área restrita, protegida pela senha mestra do administrador.' },
+      { target: 'btn-banco-placas', titulo: 'Banco de placas', texto: 'O cadastro das placas dos cavalos da frota estão disponíveis para consulta livre. Incluir uma placa não cadastrada no banco de dados exige a senha de usuário da portaria que estiver logado, ou a senha mestra de administrador, já a exclusão de uma placa cadastrada requer a senha mestra de administrador', aoEntrar: () => abrirConfiguracoes() },
+      { target: 'tab-btn-historico', titulo: 'Aba Histórico', texto: 'Aqui você busca registros antigos filtrando por cavalo, carreta ou motorista, com um período De/Até. Sem escolher nenhuma data, o sistema mostra sempre os últimos 30 dias.', aoEntrar: () => { document.getElementById('config-overlay').classList.remove('open'); showTab('historico'); } }
     );
   } else {
     passos.push({ target: ['tab-btn-lista', 'tab-btn-historico'], titulo: 'Abas Registros e Histórico', texto: 'Depois de liberar o acesso, essas abas mostram todos os registros, o Pátio, a Rua e o banco de placas.' });
@@ -4447,6 +4488,8 @@ function iniciarTour() {
 
 function fecharTour(marcarVisto) {
   document.getElementById('tour-overlay').classList.remove('open');
+  document.getElementById('patio-overlay').classList.remove('open');
+  document.getElementById('rua-overlay').classList.remove('open');
   document.getElementById('tour-spotlight').style.opacity = '0';
   document.getElementById('config-overlay').classList.remove('open');
   if (marcarVisto) localStorage.setItem('tour_visto', '1');
@@ -4470,6 +4513,8 @@ function tourPular() {
 
 function renderPassoTour() {
   const passo = tourPassos[tourIndex];
+  document.getElementById('patio-overlay').classList.remove('open');
+  document.getElementById('rua-overlay').classList.remove('open');
   if (passo.aoEntrar) passo.aoEntrar();
 
   document.getElementById('tour-titulo').textContent = passo.titulo;
